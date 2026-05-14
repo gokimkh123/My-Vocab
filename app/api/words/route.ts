@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getAuthUser } from '@/lib/supabase/server';
 import type { ApiResponse, Word } from '@/lib/supabase/types';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  const user = await getAuthUser();
+  if (!user) return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 });
+
   const supabase = createClient();
   const { searchParams } = new URL(request.url);
   const groupId = searchParams.get('group_id');
@@ -20,7 +23,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       .select('*', { count: 'exact', head: true })
       .eq('group_id', groupId);
 
-    if (error) return NextResponse.json({ data: null, error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
     return NextResponse.json({ data: { count: count ?? 0 }, error: null });
   }
 
@@ -30,11 +33,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .eq('group_id', groupId)
     .order('created_at', { ascending: false });
 
-  if (error) return NextResponse.json({ data: null, error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
   return NextResponse.json({ data, error: null });
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<Word>>> {
+  const user = await getAuthUser();
+  if (!user) return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 });
+
   const supabase = createClient();
   const body = await request.json();
   const { english, korean, part_of_speech, example_sentence, group_id } = body as {
@@ -78,11 +84,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     .select()
     .single();
 
-  if (error) return NextResponse.json({ data: null, error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ data: null, error: '단어 추가에 실패했습니다.' }, { status: 500 });
   return NextResponse.json({ data, error: null }, { status: 201 });
 }
 
 export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResponse<null>>> {
+  const user = await getAuthUser();
+  if (!user) return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 });
+
   const supabase = createClient();
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
@@ -90,6 +99,6 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
   if (!id) return NextResponse.json({ data: null, error: 'id가 필요합니다.' }, { status: 400 });
 
   const { error } = await supabase.from('words').delete().eq('id', id);
-  if (error) return NextResponse.json({ data: null, error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ data: null, error: '삭제에 실패했습니다.' }, { status: 500 });
   return NextResponse.json({ data: null, error: null });
 }

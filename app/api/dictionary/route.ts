@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/supabase/server';
 
 const DICT_API = 'https://api.dictionaryapi.dev/api/v2/entries/en';
 
 const POS_PRIORITY = ['noun', 'verb', 'adjective', 'adverb'];
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  const user = await getAuthUser();
+  if (!user) return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+
   const { searchParams } = new URL(request.url);
   const word = searchParams.get('word');
 

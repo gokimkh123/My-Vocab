@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
+import type { User } from '@supabase/supabase-js';
 
 // 데이터 쿼리용 - service role key로 RLS 우회
 export function createClient() {
@@ -9,6 +10,13 @@ export function createClient() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
+}
+
+// API 라우트에서 인증된 유저 가져오기 - 없으면 null 반환
+export async function getAuthUser(): Promise<User | null> {
+  const supabase = createAuthClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
 }
 
 // 인증 세션 확인용 - anon key + 쿠키 세션
