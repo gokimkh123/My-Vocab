@@ -66,7 +66,7 @@ export default function GroupsPage() {
         <h1 className="text-xl font-bold text-gray-800">단어장</h1>
         <button
           onClick={() => setShowModal(true)}
-          className="px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600"
+          className="px-4 min-h-[44px] bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 active:bg-blue-700 transition-colors"
         >
           + 새 그룹
         </button>
@@ -93,7 +93,7 @@ export default function GroupsPage() {
             <button
               onClick={() => handleDelete(group.id)}
               disabled={deletingId === group.id}
-              className="p-2 text-gray-300 hover:text-red-400 disabled:opacity-40 transition-colors text-lg"
+              className="flex items-center justify-center w-11 h-11 text-gray-300 hover:text-red-400 active:text-red-500 disabled:opacity-40 transition-colors text-lg shrink-0"
               aria-label="삭제"
             >
               ✕

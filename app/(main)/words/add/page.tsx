@@ -81,7 +81,10 @@ export default function AddWordPage() {
               onChange={(e) => setForm((prev) => ({ ...prev, english: e.target.value }))}
               onBlur={lookupDictionary}
               required
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              className="flex-1 px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 min-h-[48px]"
               placeholder="예: vocabulary"
             />
             <button
@@ -102,7 +105,7 @@ export default function AddWordPage() {
             value={form.korean}
             onChange={(e) => setForm((prev) => ({ ...prev, korean: e.target.value }))}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+            className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 min-h-[48px]"
             placeholder="예: 어휘, 단어"
           />
         </div>
@@ -128,7 +131,8 @@ export default function AddWordPage() {
             type="text"
             value={form.example_sentence}
             onChange={(e) => setForm((prev) => ({ ...prev, example_sentence: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+            autoCapitalize="sentences"
+            className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 min-h-[48px]"
             placeholder="예문 입력 (선택사항)"
           />
         </div>
@@ -155,7 +159,7 @@ export default function AddWordPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50"
+          className="w-full min-h-[52px] bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 active:bg-blue-700 disabled:opacity-50 transition-colors"
         >
           {loading ? '저장 중...' : '단어 추가'}
         </button>

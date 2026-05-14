@@ -95,7 +95,7 @@ export default function GroupDetailPage() {
             <button
               onClick={() => handleDelete(word.id)}
               disabled={deletingId === word.id}
-              className="ml-4 text-gray-300 hover:text-red-400 disabled:opacity-40 transition-colors text-lg leading-none"
+              className="flex items-center justify-center w-11 h-11 ml-2 text-gray-300 hover:text-red-400 active:text-red-500 disabled:opacity-40 transition-colors text-lg shrink-0"
               aria-label="삭제"
             >
               ✕

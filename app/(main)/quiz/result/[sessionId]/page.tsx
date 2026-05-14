@@ -110,7 +110,7 @@ export default function QuizResultPage() {
           <button
             onClick={handleRetry}
             disabled={retrying}
-            className="w-full py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-50"
+            className="w-full min-h-[52px] bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 active:bg-red-700 disabled:opacity-50 transition-colors"
           >
             {retrying ? '준비 중...' : `틀린 단어 ${wrongWords.length}개 다시 시험`}
           </button>
@@ -118,13 +118,13 @@ export default function QuizResultPage() {
         <div className="flex gap-3">
           <Link
             href="/quiz"
-            className="flex-1 py-2 text-center bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600"
+            className="flex-1 min-h-[52px] flex items-center justify-center bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 active:bg-blue-700 transition-colors"
           >
             새 퀴즈
           </Link>
           <Link
             href="/quiz/history"
-            className="flex-1 py-2 text-center bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200"
+            className="flex-1 min-h-[52px] flex items-center justify-center bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 active:bg-gray-300 transition-colors"
           >
             퀴즈 기록
           </Link>

@@ -118,7 +118,7 @@ export default function QuizSessionPage() {
           </div>
           <button
             onClick={handleNext}
-            className="w-full py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600"
+            className="w-full min-h-[52px] bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 active:bg-blue-700 transition-colors"
           >
             {currentIndex + 1 >= words.length ? '결과 보기' : '다음'}
           </button>
@@ -130,13 +130,16 @@ export default function QuizSessionPage() {
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
             autoFocus
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             placeholder="정답 입력..."
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-lg text-gray-900"
+            className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-lg text-gray-900 min-h-[56px]"
           />
           <button
             type="submit"
             disabled={submitting || !answer.trim()}
-            className="w-full py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50"
+            className="w-full min-h-[52px] bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 active:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             확인
           </button>

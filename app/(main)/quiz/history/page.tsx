@@ -164,7 +164,7 @@ export default function QuizHistoryPage() {
                         <button
                           onClick={() => handleRetry(s)}
                           disabled={retryingId === s.id}
-                          className="px-3 py-1.5 text-xs font-medium bg-red-50 text-red-500 rounded-lg hover:bg-red-100 disabled:opacity-50"
+                          className="px-3 min-h-[44px] text-xs font-medium bg-red-50 text-red-500 rounded-lg hover:bg-red-100 active:bg-red-200 disabled:opacity-50 transition-colors"
                         >
                           {retryingId === s.id ? '준비 중...' : '틀린 단어 재시험'}
                         </button>
@@ -174,7 +174,7 @@ export default function QuizHistoryPage() {
                       <button
                         onClick={() => handleDelete(s.id)}
                         disabled={deletingId === s.id}
-                        className="text-gray-300 hover:text-red-400 disabled:opacity-50 text-lg leading-none"
+                        className="flex items-center justify-center w-11 h-11 text-gray-300 hover:text-red-400 active:text-red-500 disabled:opacity-50"
                       >
                         ✕
                       </button>

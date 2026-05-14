@@ -7,21 +7,38 @@
   --foreground: #171717;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
+  /* 오버스크롤 bounce 방지 (선택적) */
+  overscroll-behavior-y: none;
+  /* 탭 하이라이트 제거 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS input auto-zoom 방지 — 16px 미만이면 Safari가 자동 확대 */
+input,
+select,
+textarea {
+  font-size: 16px;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+  /* Safe area 유틸리티 */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
   }
 }

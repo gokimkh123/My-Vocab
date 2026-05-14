@@ -126,7 +126,7 @@ export default function QuizSetupPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50"
+          className="w-full min-h-[52px] bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 active:bg-blue-700 disabled:opacity-50 transition-colors"
         >
           {loading ? '시작 중...' : '퀴즈 시작'}
         </button>
