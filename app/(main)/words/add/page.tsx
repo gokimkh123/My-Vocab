@@ -65,6 +65,7 @@ export default function AddWordPage() {
     }
 
     router.push(`/groups/${form.group_id}`);
+    router.refresh();
   }
 
   return (
@@ -80,7 +81,7 @@ export default function AddWordPage() {
               onChange={(e) => setForm((prev) => ({ ...prev, english: e.target.value }))}
               onBlur={lookupDictionary}
               required
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               placeholder="예: vocabulary"
             />
             <button
@@ -101,7 +102,7 @@ export default function AddWordPage() {
             value={form.korean}
             onChange={(e) => setForm((prev) => ({ ...prev, korean: e.target.value }))}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             placeholder="예: 어휘, 단어"
           />
         </div>
@@ -111,7 +112,7 @@ export default function AddWordPage() {
           <select
             value={form.part_of_speech}
             onChange={(e) => setForm((prev) => ({ ...prev, part_of_speech: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
           >
             <option value="">선택 안함</option>
             <option value="noun">noun (명사)</option>
@@ -127,7 +128,7 @@ export default function AddWordPage() {
             type="text"
             value={form.example_sentence}
             onChange={(e) => setForm((prev) => ({ ...prev, example_sentence: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             placeholder="예문 입력 (선택사항)"
           />
         </div>
@@ -138,7 +139,7 @@ export default function AddWordPage() {
             value={form.group_id}
             onChange={(e) => setForm((prev) => ({ ...prev, group_id: e.target.value }))}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
           >
             <option value="">그룹 선택</option>
             {groups.map((g) => (

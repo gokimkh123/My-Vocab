@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { createAuthClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
 export default async function MainLayout({
@@ -7,7 +7,7 @@ export default async function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createClient();
+  const supabase = createAuthClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -16,7 +16,7 @@ export default async function MainLayout({
 
   async function signOut() {
     'use server';
-    const supabase = createClient();
+    const supabase = createAuthClient();
     await supabase.auth.signOut();
     redirect('/login');
   }
@@ -37,6 +37,9 @@ export default async function MainLayout({
             </Link>
             <Link href="/quiz" className="text-sm text-gray-600 hover:text-gray-900">
               퀴즈
+            </Link>
+            <Link href="/quiz/history" className="text-sm text-gray-600 hover:text-gray-900">
+              기록
             </Link>
           </div>
           <form action={signOut}>

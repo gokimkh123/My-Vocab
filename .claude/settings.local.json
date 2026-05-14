@@ -3,7 +3,8 @@
     "allow": [
       "Bash(wsl pwd *)",
       "Bash(wsl ls *)",
-      "Bash(wsl *)"
+      "Bash(wsl *)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

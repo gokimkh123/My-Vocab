@@ -27,11 +27,9 @@ export default function QuizSetupPage() {
     fetch(`/api/words?group_id=${groupId}&count_only=true`)
       .then((r) => r.json())
       .then((res) => {
-        if (res.data?.count) {
-          const max = Math.max(res.data.count, 10);
-          setMaxCount(max);
-          setWordCount(Math.min(wordCount, max));
-        }
+        const count = res.data?.count ?? 0;
+        setMaxCount(count);
+        setWordCount(Math.min(10, count));
       });
   }, [groupId]);
 
@@ -70,7 +68,7 @@ export default function QuizSetupPage() {
             value={groupId}
             onChange={(e) => setGroupId(e.target.value)}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
           >
             <option value="">선택</option>
             {groups.map((g) => (
@@ -107,16 +105,20 @@ export default function QuizSetupPage() {
           </label>
           <input
             type="range"
-            min={10}
+            min={1}
             max={maxCount}
             value={wordCount}
             onChange={(e) => setWordCount(Number(e.target.value))}
             className="w-full"
+            disabled={maxCount === 0}
           />
           <div className="flex justify-between text-xs text-gray-400 mt-1">
-            <span>10</span>
-            <span>{maxCount}</span>
+            <span>1</span>
+            <span>{maxCount}개</span>
           </div>
+          {maxCount === 0 && groupId && (
+            <p className="text-xs text-red-400 mt-1">이 단어장에 단어가 없습니다.</p>
+          )}
         </div>
 
         {error && <p className="text-sm text-red-500">{error}</p>}

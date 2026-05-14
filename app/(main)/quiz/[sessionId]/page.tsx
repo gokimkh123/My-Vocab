@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import type { Word, QuizSession } from '@/lib/supabase/types';
 
 type QuizWord = Word & { answered?: boolean; correct?: boolean };
@@ -9,6 +9,8 @@ type QuizWord = Word & { answered?: boolean; correct?: boolean };
 export default function QuizSessionPage() {
   const router = useRouter();
   const { sessionId } = useParams<{ sessionId: string }>();
+  const searchParams = useSearchParams();
+  const wordIdsParam = searchParams.get('word_ids');
   const [session, setSession] = useState<QuizSession | null>(null);
   const [words, setWords] = useState<QuizWord[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -18,7 +20,10 @@ export default function QuizSessionPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/quiz?session_id=${sessionId}`)
+    const url = wordIdsParam
+      ? `/api/quiz?session_id=${sessionId}&word_ids=${wordIdsParam}`
+      : `/api/quiz?session_id=${sessionId}`;
+    fetch(url)
       .then((r) => r.json())
       .then((res) => {
         if (res.data) {
@@ -27,7 +32,7 @@ export default function QuizSessionPage() {
         }
         setLoading(false);
       });
-  }, [sessionId]);
+  }, [sessionId, wordIdsParam]);
 
   const currentWord = words[currentIndex];
 
@@ -40,7 +45,7 @@ export default function QuizSessionPage() {
     const correctAnswer = session.quiz_type === 'en_to_ko' ? currentWord.korean : currentWord.english;
     const isCorrect = answer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
 
-    await fetch('/api/quiz', {
+    const patchRes = await fetch('/api/quiz', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -50,6 +55,12 @@ export default function QuizSessionPage() {
         user_answer: answer.trim(),
       }),
     });
+    const patchData = await patchRes.json();
+    if (patchData.error) {
+      alert(`저장 오류: ${patchData.error}\nSupabase에 quiz_results 테이블이 있는지 확인하세요.`);
+      setSubmitting(false);
+      return;
+    }
 
     setFeedback(isCorrect ? 'correct' : 'wrong');
     setSubmitting(false);
@@ -121,7 +132,7 @@ export default function QuizSessionPage() {
             onChange={(e) => setAnswer(e.target.value)}
             autoFocus
             placeholder="정답 입력..."
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-lg"
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-lg text-gray-900"
           />
           <button
             type="submit"

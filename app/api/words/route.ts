@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import type { ApiResponse, Word } from '@/lib/supabase/types';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const supabase = createClient();
   const { searchParams } = new URL(request.url);
@@ -47,6 +49,20 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     return NextResponse.json(
       { data: null, error: '영어 단어, 한글 뜻, 그룹은 필수입니다.' },
       { status: 400 }
+    );
+  }
+
+  const { data: existing } = await supabase
+    .from('words')
+    .select('id')
+    .eq('group_id', group_id)
+    .ilike('english', english.trim())
+    .maybeSingle();
+
+  if (existing) {
+    return NextResponse.json(
+      { data: null, error: '이 단어장에 이미 존재하는 단어입니다.' },
+      { status: 409 }
     );
   }
 
