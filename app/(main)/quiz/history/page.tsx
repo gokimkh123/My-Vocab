@@ -127,7 +127,7 @@ export default function QuizHistoryPage() {
       )}
 
       <div className="space-y-6">
-        {[...grouped.entries()].map(([date, list]) => (
+        {Array.from(grouped.entries()).map(([date, list]) => (
           <div key={date}>
             <p className="text-xs font-semibold text-gray-400 uppercase mb-2">{date}</p>
             <ul className="space-y-2">

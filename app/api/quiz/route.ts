@@ -37,7 +37,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       .eq('session_id', sessionId)
       .eq('is_correct', false);
 
-    const words = (wrongResults ?? []).map((r: { words: Word | null }) => r.words).filter(Boolean);
+    type WrongRow = { id: string; user_answer: string | null; words: Word | null };
+    const words = ((wrongResults ?? []) as unknown as WrongRow[])
+      .map((r) => r.words)
+      .filter((w): w is Word => w !== null);
     return NextResponse.json({ data: { session, words, results: wrongResults ?? [] } });
   }
 
