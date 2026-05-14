@@ -41,7 +41,6 @@ export default function QuizSessionPage() {
     if (!currentWord || !session) return;
     setSubmitting(true);
 
-    const question = session.quiz_type === 'en_to_ko' ? currentWord.english : currentWord.korean;
     const correctAnswer = session.quiz_type === 'en_to_ko' ? currentWord.korean : currentWord.english;
     const isCorrect = answer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
 
