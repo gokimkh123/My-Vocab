@@ -112,6 +112,11 @@ input[type="range"]::-moz-range-thumb {
   from { stroke-dashoffset: var(--circ); }
 }
 
+/* 모달 열릴 때 하단 탭바 완전히 숨김 */
+body.modal-open #bottom-tab-bar {
+  display: none;
+}
+
 @layer utilities {
   .pb-safe  { padding-bottom: env(safe-area-inset-bottom); }
   .pt-safe  { padding-top: env(safe-area-inset-top); }

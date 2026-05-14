@@ -105,8 +105,9 @@ export default function MobileNav({ signOut }: Props) {
         </div>
       )}
 
-      {/* Bottom tab bar — 키보드가 열리면 화면 밖으로 숨김 */}
+      {/* Bottom tab bar — 키보드·모달 열리면 숨김 */}
       <nav
+        id="bottom-tab-bar"
         className={`fixed bottom-0 left-0 right-0 z-40 bg-[var(--surface)]/95 backdrop-blur-sm border-t border-[var(--border)] transition-transform duration-200 ease-in-out ${
           keyboardOpen ? 'translate-y-full' : 'translate-y-0'
         }`}

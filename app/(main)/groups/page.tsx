@@ -40,6 +40,13 @@ export default function GroupsPage() {
 
   useEffect(() => { fetchGroups(); }, [fetchGroups]);
 
+  // 모달 열릴 때 body 클래스 토글 → CSS로 탭바 숨김
+  useEffect(() => {
+    if (showModal) document.body.classList.add('modal-open');
+    else document.body.classList.remove('modal-open');
+    return () => document.body.classList.remove('modal-open');
+  }, [showModal]);
+
   // 모달 열릴 때 visualViewport 감지 → 키보드 높이만큼 시트 위로 이동
   useEffect(() => {
     if (!showModal) { setSheetBottom(0); return; }
