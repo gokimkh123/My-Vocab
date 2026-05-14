@@ -7,12 +7,12 @@ import { GroupCardSkeleton } from '@/components/Skeleton';
 import { useToast } from '@/components/Toast';
 
 const PALETTES = [
-  { bar: 'bg-indigo-500', text: 'text-indigo-600 dark:text-indigo-400' },
-  { bar: 'bg-violet-500', text: 'text-violet-600 dark:text-violet-400' },
-  { bar: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
-  { bar: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-400' },
-  { bar: 'bg-rose-500', text: 'text-rose-600 dark:text-rose-400' },
-  { bar: 'bg-cyan-500', text: 'text-cyan-600 dark:text-cyan-400' },
+  { bar: 'bg-indigo-500' },
+  { bar: 'bg-violet-500' },
+  { bar: 'bg-emerald-500' },
+  { bar: 'bg-amber-500' },
+  { bar: 'bg-rose-500' },
+  { bar: 'bg-cyan-500' },
 ];
 
 export default function GroupsPage() {
@@ -24,9 +24,11 @@ export default function GroupsPage() {
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // 키보드 높이 — 바텀시트를 키보드 위로 올리기 위해 사용
+  const [sheetBottom, setSheetBottom] = useState(0);
 
   const fetchGroups = useCallback(async () => {
-    const res = await fetch('/api/groups');
+    const res = await fetch('/api/groups', { cache: 'no-store' });
     const data = await res.json();
     if (data.error) {
       toast.show(data.error, 'error');
@@ -37,6 +39,27 @@ export default function GroupsPage() {
   }, [toast]);
 
   useEffect(() => { fetchGroups(); }, [fetchGroups]);
+
+  // 모달 열릴 때 visualViewport 감지 → 키보드 높이만큼 시트 위로 이동
+  useEffect(() => {
+    if (!showModal) { setSheetBottom(0); return; }
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const update = () => {
+      // iOS에서 키보드 높이 = window 높이 - visual viewport 높이 - scroll offset
+      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setSheetBottom(kb);
+    };
+
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    update();
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, [showModal]);
 
   async function handleDelete(id: string) {
     if (!confirm('단어장을 삭제하면 안에 있는 모든 단어도 삭제됩니다. 계속할까요?')) return;
@@ -71,6 +94,11 @@ export default function GroupsPage() {
     setDescription('');
     toast.show('단어장을 만들었습니다!', 'success');
     fetchGroups();
+  }
+
+  function closeModal() {
+    setShowModal(false);
+    setSheetBottom(0);
   }
 
   return (
@@ -157,45 +185,59 @@ export default function GroupsPage() {
         </ul>
       )}
 
-      {/* New group bottom sheet */}
+      {/* Bottom sheet modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50" onClick={() => setShowModal(false)}>
+        <div className="fixed inset-0 z-50" onClick={closeModal}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+          {/*
+            키보드가 열리면 sheetBottom이 키보드 높이만큼 커져서
+            시트가 키보드 바로 위에 위치함
+          */}
           <div
-            className="absolute bottom-0 left-0 right-0 bg-[var(--surface)] rounded-t-3xl shadow-2xl animate-slide-up"
-            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+            className="absolute left-0 right-0 bg-[var(--surface)] rounded-t-3xl shadow-2xl animate-slide-up"
+            style={{
+              bottom: `${sheetBottom}px`,
+              transition: 'bottom 0.2s ease',
+              // 키보드가 없을 때만 safe-area 패딩 적용
+              paddingBottom: sheetBottom > 0 ? '16px' : 'env(safe-area-inset-bottom)',
+            }}
             onClick={e => e.stopPropagation()}
           >
+            {/* Handle */}
             <div className="w-10 h-1 bg-[var(--border2)] rounded-full mx-auto mt-3 mb-5" />
-            <div className="px-5 pb-6">
+
+            <div className="px-5 pb-2">
               <h2 className="text-lg font-bold text-[var(--text)] mb-5">새 단어장 만들기</h2>
-              <form onSubmit={handleCreate} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-semibold text-[var(--text2)]">이름 *</label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    required
-                    autoFocus
-                    placeholder="예: 토익 단어장"
-                    className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all min-h-[48px]"
-                  />
+              <form onSubmit={handleCreate}>
+                <div className="space-y-4 mb-5">
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-semibold text-[var(--text2)]">이름 *</label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      required
+                      autoFocus
+                      placeholder="예: 토익 단어장"
+                      className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all min-h-[48px]"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-semibold text-[var(--text2)]">설명 <span className="text-[var(--text3)] font-normal">(선택)</span></label>
+                    <input
+                      type="text"
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      placeholder="어떤 단어들을 모을 건가요?"
+                      className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all min-h-[48px]"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-semibold text-[var(--text2)]">설명 <span className="text-[var(--text3)] font-normal">(선택)</span></label>
-                  <input
-                    type="text"
-                    value={description}
-                    onChange={e => setDescription(e.target.value)}
-                    placeholder="어떤 단어들을 모을 건가요?"
-                    className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all min-h-[48px]"
-                  />
-                </div>
-                <div className="flex gap-3 pt-1">
+                {/* 버튼은 항상 키보드 바로 위에 위치 */}
+                <div className="flex gap-3 pb-2">
                   <button
                     type="button"
-                    onClick={() => setShowModal(false)}
+                    onClick={closeModal}
                     className="flex-1 min-h-[50px] text-sm font-semibold text-[var(--text2)] bg-[var(--surface2)] rounded-xl hover:bg-[var(--border)] transition-colors"
                   >
                     취소

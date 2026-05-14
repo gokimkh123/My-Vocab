@@ -12,13 +12,11 @@ export async function GET(): Promise<NextResponse<ApiResponse<Group[]>>> {
   const { data, error } = await supabase
     .from('groups')
     .select('id, name, description, created_at')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
-  return NextResponse.json(
-    { data, error: null },
-    { headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' } }
-  );
+  return NextResponse.json({ data, error: null });
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<Group>>> {
@@ -35,7 +33,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
   const { data, error } = await supabase
     .from('groups')
-    .insert({ name: name.trim(), description: description?.trim() || null })
+    .insert({ name: name.trim(), description: description?.trim() || null, user_id: user.id })
     .select()
     .single();
 
@@ -53,11 +51,22 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
 
   if (!id) return NextResponse.json({ data: null, error: 'id가 필요합니다.' }, { status: 400 });
 
-  // Delete quiz_results → quiz_sessions → words → group (FK constraint order)
+  // 본인 소유 확인
+  const { data: group } = await supabase
+    .from('groups')
+    .select('id')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!group) return NextResponse.json({ data: null, error: '삭제 권한이 없습니다.' }, { status: 403 });
+
+  // Delete quiz_results → quiz_sessions → words → group (FK order)
   const { data: sessions } = await supabase
     .from('quiz_sessions')
     .select('id')
-    .eq('group_id', id);
+    .eq('group_id', id)
+    .eq('user_id', user.id);
 
   if (sessions && sessions.length > 0) {
     const sessionIds = sessions.map((s: { id: string }) => s.id);
@@ -65,9 +74,9 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
     await supabase.from('quiz_sessions').delete().in('id', sessionIds);
   }
 
-  await supabase.from('words').delete().eq('group_id', id);
+  await supabase.from('words').delete().eq('group_id', id).eq('user_id', user.id);
 
-  const { error } = await supabase.from('groups').delete().eq('id', id);
+  const { error } = await supabase.from('groups').delete().eq('id', id).eq('user_id', user.id);
   if (error) return NextResponse.json({ data: null, error: '삭제에 실패했습니다.' }, { status: 500 });
   return NextResponse.json({ data: null, error: null });
 }

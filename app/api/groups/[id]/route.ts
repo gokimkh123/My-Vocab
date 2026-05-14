@@ -16,11 +16,9 @@ export async function GET(
     .from('groups')
     .select('id, name, description, created_at')
     .eq('id', params.id)
+    .eq('user_id', user.id)
     .single();
 
   if (error) return NextResponse.json({ data: null, error: '그룹을 찾을 수 없습니다.' }, { status: 404 });
-  return NextResponse.json(
-    { data, error: null },
-    { headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' } }
-  );
+  return NextResponse.json({ data, error: null });
 }

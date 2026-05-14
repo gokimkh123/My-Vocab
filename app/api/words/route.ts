@@ -21,7 +21,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { count, error } = await supabase
       .from('words')
       .select('*', { count: 'exact', head: true })
-      .eq('group_id', groupId);
+      .eq('group_id', groupId)
+      .eq('user_id', user.id);
 
     if (error) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
     return NextResponse.json({ data: { count: count ?? 0 }, error: null });
@@ -31,13 +32,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .from('words')
     .select('id, group_id, english, korean, part_of_speech, example_sentence, created_at')
     .eq('group_id', groupId)
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
-  return NextResponse.json(
-    { data, error: null },
-    { headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' } }
-  );
+  return NextResponse.json({ data, error: null });
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<Word>>> {
@@ -65,6 +64,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     .from('words')
     .select('id')
     .eq('group_id', group_id)
+    .eq('user_id', user.id)
     .ilike('english', english.trim())
     .maybeSingle();
 
@@ -83,6 +83,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       part_of_speech: part_of_speech || null,
       example_sentence: example_sentence?.trim() || null,
       group_id,
+      user_id: user.id,
     })
     .select()
     .single();
@@ -101,7 +102,12 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
 
   if (!id) return NextResponse.json({ data: null, error: 'id가 필요합니다.' }, { status: 400 });
 
-  const { error } = await supabase.from('words').delete().eq('id', id);
+  const { error } = await supabase
+    .from('words')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id);
+
   if (error) return NextResponse.json({ data: null, error: '삭제에 실패했습니다.' }, { status: 500 });
   return NextResponse.json({ data: null, error: null });
 }
