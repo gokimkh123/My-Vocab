@@ -3,8 +3,35 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f6f5ff;
+  --surface: #ffffff;
+  --surface2: #eeecff;
+  --border: #e0ddf8;
+  --border2: #ccc9ee;
+  --text: #1a1733;
+  --text2: #6b6890;
+  --text3: #9896b8;
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --primary-light: #eef2ff;
+  --shadow: 0 1px 3px rgba(99,102,241,0.08), 0 4px 12px rgba(99,102,241,0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d0c1e;
+    --surface: #17162c;
+    --surface2: #1f1e36;
+    --border: #2c2a47;
+    --border2: #3d3960;
+    --text: #e8e6ff;
+    --text2: #7e7ca0;
+    --text3: #5c5a7c;
+    --primary: #818cf8;
+    --primary-hover: #a5b4fc;
+    --primary-light: #1e1c38;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
+  }
 }
 
 html {
@@ -14,31 +41,92 @@ html {
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  /* 오버스크롤 bounce 방지 (선택적) */
+  color: var(--text);
+  background: var(--bg);
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'system-ui', 'Helvetica Neue', sans-serif;
   overscroll-behavior-y: none;
-  /* 탭 하이라이트 제거 */
   -webkit-tap-highlight-color: transparent;
 }
 
-/* iOS input auto-zoom 방지 — 16px 미만이면 Safari가 자동 확대 */
-input,
-select,
-textarea {
+input, select, textarea {
   font-size: 16px;
+  font-family: inherit;
+}
+
+/* Custom range slider */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid var(--surface);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid var(--surface);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+  cursor: pointer;
+}
+
+@keyframes shimmer {
+  0%   { background-position: -400% 0; }
+  100% { background-position: 400% 0; }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(20px) scale(0.93); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: translateY(10px) scale(0.95); }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pop {
+  0%   { opacity: 0; transform: scale(0.9); }
+  65%  { transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes score-draw {
+  from { stroke-dashoffset: var(--circ); }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .pb-safe  { padding-bottom: env(safe-area-inset-bottom); }
+  .pt-safe  { padding-top: env(safe-area-inset-top); }
+
+  .skeleton {
+    background: linear-gradient(90deg,
+      var(--surface2) 25%,
+      var(--border)   37%,
+      var(--surface2) 63%
+    );
+    background-size: 400% 100%;
+    animation: shimmer 1.5s ease infinite;
   }
-  /* Safe area 유틸리티 */
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  .pt-safe {
-    padding-top: env(safe-area-inset-top);
-  }
+
+  .animate-slide-up { animation: slide-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-pop      { animation: pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-fade-in  { animation: fade-in 0.25s ease both; }
 }

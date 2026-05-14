@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { HistoryCardSkeleton } from '@/components/Skeleton';
 
 type SessionWithGroup = {
   id: string;
@@ -35,6 +36,18 @@ function groupByDate(sessions: SessionWithGroup[]) {
   return map;
 }
 
+function scoreColor(rate: number) {
+  if (rate >= 80) return 'text-emerald-600 dark:text-emerald-400';
+  if (rate >= 50) return 'text-amber-600 dark:text-amber-400';
+  return 'text-red-500';
+}
+
+function dotColor(rate: number) {
+  if (rate >= 80) return 'bg-emerald-500';
+  if (rate >= 50) return 'bg-amber-500';
+  return 'bg-red-400';
+}
+
 export default function QuizHistoryPage() {
   const router = useRouter();
   const [sessions, setSessions] = useState<SessionWithGroup[]>([]);
@@ -45,8 +58,8 @@ export default function QuizHistoryPage() {
 
   useEffect(() => {
     fetch('/api/quiz/history', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((res) => {
+      .then(r => r.json())
+      .then(res => {
         if (res.data) setSessions(res.data);
         setLoading(false);
       });
@@ -59,10 +72,7 @@ export default function QuizHistoryPage() {
     const wrongData = await wrongRes.json();
     const wrongWords: { id: string }[] = wrongData.data?.words ?? [];
 
-    if (wrongWords.length === 0) {
-      setRetryingId(null);
-      return;
-    }
+    if (wrongWords.length === 0) { setRetryingId(null); return; }
 
     const newRes = await fetch('/api/quiz', {
       method: 'POST',
@@ -76,7 +86,7 @@ export default function QuizHistoryPage() {
     const newData = await newRes.json();
 
     if (newData.data) {
-      const wordIds = wrongWords.map((w) => w.id).join(',');
+      const wordIds = wrongWords.map(w => w.id).join(',');
       router.push(`/quiz/${newData.data.id}?word_ids=${wordIds}`);
     }
     setRetryingId(null);
@@ -87,15 +97,9 @@ export default function QuizHistoryPage() {
     setDeletingId(id);
     const res = await fetch(`/api/quiz?session_id=${id}`, { method: 'DELETE' });
     const data = await res.json();
-    if (data.error) {
-      alert(`삭제 실패: ${data.error}`);
-    } else {
-      setSessions((prev) => prev.filter((s) => s.id !== id));
-    }
+    if (!data.error) setSessions(prev => prev.filter(s => s.id !== id));
     setDeletingId(null);
   }
-
-  if (loading) return <p className="text-center text-gray-400 mt-16">로딩 중...</p>;
 
   const sorted = [...sessions].sort((a, b) => {
     const ta = new Date(a.completed_at ?? a.created_at).getTime();
@@ -106,86 +110,146 @@ export default function QuizHistoryPage() {
   const grouped = groupByDate(sorted);
 
   return (
-    <div>
+    <div className="animate-fade-in">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-gray-800">퀴즈 기록</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--text)] tracking-tight">퀴즈 기록</h1>
+          {!loading && sessions.length > 0 && (
+            <p className="text-sm text-[var(--text2)] mt-0.5">총 {sessions.length}회</p>
+          )}
+        </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setSortAsc((v) => !v)}
-            className="text-sm text-gray-500 hover:text-gray-700"
+            onClick={() => setSortAsc(v => !v)}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[var(--text2)] bg-[var(--surface2)] rounded-xl border border-[var(--border)] hover:bg-[var(--border)] transition-colors"
           >
-            {sortAsc ? '오래된순 ↑' : '최신순 ↓'}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              {sortAsc ? <><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></> : <><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></>}
+            </svg>
+            {sortAsc ? '오래된순' : '최신순'}
           </button>
-          <Link href="/quiz" className="text-sm text-blue-500 hover:text-blue-600">
-            새 퀴즈 →
+          <Link
+            href="/quiz"
+            className="px-3 py-2 text-xs font-semibold text-indigo-500 bg-indigo-500/10 rounded-xl hover:bg-indigo-500/15 transition-colors"
+          >
+            새 퀴즈
           </Link>
         </div>
       </div>
 
-      {sessions.length === 0 && (
-        <p className="text-center text-gray-400 mt-16">아직 퀴즈 기록이 없습니다.</p>
+      {/* Loading */}
+      {loading && (
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map(i => <HistoryCardSkeleton key={i} />)}
+        </div>
       )}
 
-      <div className="space-y-6">
-        {Array.from(grouped.entries()).map(([date, list]) => (
-          <div key={date}>
-            <p className="text-xs font-semibold text-gray-400 uppercase mb-2">{date}</p>
-            <ul className="space-y-2">
-              {list.map((s) => {
-                const wrongCount = s.total_count - s.correct_count;
-                const rate = Math.round((s.correct_count / s.total_count) * 100);
-                return (
-                  <li
-                    key={s.id}
-                    className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between gap-3"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-gray-800 truncate">
-                          {s.groups?.name ?? '알 수 없음'}
-                        </p>
-                        <span className="text-xs text-gray-400 shrink-0">
-                          {formatTime(s.completed_at ?? s.created_at)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {s.quiz_type === 'en_to_ko' ? '영→한' : '한→영'} &nbsp;·&nbsp;
-                        {s.total_count}문제 &nbsp;·&nbsp;
-                        <span className={rate >= 80 ? 'text-green-500' : rate >= 50 ? 'text-yellow-500' : 'text-red-400'}>
-                          {rate}%
-                        </span>
-                        {wrongCount > 0 && (
-                          <span className="text-red-400"> ({wrongCount}개 틀림)</span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="shrink-0 flex items-center gap-2">
-                      {wrongCount > 0 ? (
-                        <button
-                          onClick={() => handleRetry(s)}
-                          disabled={retryingId === s.id}
-                          className="px-3 min-h-[44px] text-xs font-medium bg-red-50 text-red-500 rounded-lg hover:bg-red-100 active:bg-red-200 disabled:opacity-50 transition-colors"
-                        >
-                          {retryingId === s.id ? '준비 중...' : '틀린 단어 재시험'}
-                        </button>
-                      ) : (
-                        <span className="text-xs text-green-500 font-medium">완벽 🎉</span>
-                      )}
-                      <button
-                        onClick={() => handleDelete(s.id)}
-                        disabled={deletingId === s.id}
-                        className="flex items-center justify-center w-11 h-11 text-gray-300 hover:text-red-400 active:text-red-500 disabled:opacity-50"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+      {/* Empty state */}
+      {!loading && sessions.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+          <div className="w-14 h-14 rounded-2xl bg-[var(--surface2)] flex items-center justify-center mb-4">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/>
+              <line x1="12" y1="20" x2="12" y2="4"/>
+              <line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
           </div>
-        ))}
-      </div>
+          <p className="font-semibold text-[var(--text)] mb-1">아직 퀴즈 기록이 없어요</p>
+          <p className="text-sm text-[var(--text2)] mb-6">퀴즈를 풀고 나면 여기에 기록이 남아요</p>
+          <Link href="/quiz" className="px-5 py-2.5 bg-indigo-500 text-white text-sm font-semibold rounded-xl hover:bg-indigo-600 transition-colors">
+            퀴즈 시작하기
+          </Link>
+        </div>
+      )}
+
+      {/* Timeline */}
+      {!loading && sessions.length > 0 && (
+        <div className="space-y-8 animate-slide-up">
+          {Array.from(grouped.entries()).map(([date, list]) => (
+            <div key={date}>
+              {/* Date header */}
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-xs font-bold text-[var(--text3)] uppercase tracking-widest whitespace-nowrap">{date}</span>
+                <div className="flex-1 h-px bg-[var(--border)]" />
+                <span className="text-xs text-[var(--text3)]">{list.length}회</span>
+              </div>
+
+              {/* Timeline nodes */}
+              <div className="relative">
+                <div className="absolute left-3 top-0 bottom-0 w-px bg-[var(--border)]" aria-hidden />
+                <ul className="space-y-3 pl-9">
+                  {list.map(s => {
+                    const wrongCount = s.total_count - s.correct_count;
+                    const rate = Math.round(s.correct_count / s.total_count * 100);
+                    return (
+                      <li key={s.id} className="relative">
+                        {/* Timeline dot */}
+                        <div className={`absolute -left-6 top-4 w-3 h-3 rounded-full border-2 border-[var(--bg)] ${dotColor(rate)}`} aria-hidden />
+
+                        {/* Card */}
+                        <div
+                          className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4"
+                          style={{ boxShadow: 'var(--shadow)' }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-semibold text-[var(--text)] truncate">{s.groups?.name ?? '알 수 없음'}</p>
+                                <span className="text-xs text-[var(--text3)] shrink-0">{formatTime(s.completed_at ?? s.created_at)}</span>
+                              </div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs text-[var(--text3)]">
+                                  {s.quiz_type === 'en_to_ko' ? '영→한' : '한→영'} · {s.total_count}문제
+                                </span>
+                                <span className={`text-xs font-bold ${scoreColor(rate)}`}>{rate}%</span>
+                                {wrongCount > 0 && (
+                                  <span className="text-xs font-medium text-red-400">{wrongCount}개 틀림</span>
+                                )}
+                                {wrongCount === 0 && (
+                                  <span className="text-xs font-semibold text-emerald-500">완벽 🎉</span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {wrongCount > 0 && (
+                                <button
+                                  onClick={() => handleRetry(s)}
+                                  disabled={retryingId === s.id}
+                                  className="px-3 min-h-[36px] text-xs font-semibold text-red-500 bg-red-500/10 rounded-lg hover:bg-red-500/15 disabled:opacity-50 transition-colors"
+                                >
+                                  {retryingId === s.id ? '...' : '재시험'}
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDelete(s.id)}
+                                disabled={deletingId === s.id}
+                                className="w-9 h-9 flex items-center justify-center rounded-lg text-[var(--text3)] hover:text-red-400 hover:bg-red-500/10 disabled:opacity-40 transition-colors"
+                                aria-label="삭제"
+                              >
+                                {deletingId === s.id ? (
+                                  <span className="w-3 h-3 border-2 border-[var(--border2)] border-t-[var(--text3)] rounded-full animate-spin" />
+                                ) : (
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="3 6 5 6 21 6"/>
+                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                    <path d="M10 11v6M14 11v6"/>
+                                  </svg>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

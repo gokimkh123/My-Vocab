@@ -5,11 +5,45 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { Word, QuizSession } from '@/lib/supabase/types';
 
-type WrongResult = {
-  id: string;
-  user_answer: string | null;
-  words: Word | null;
-};
+type WrongResult = { id: string; user_answer: string | null; words: Word | null };
+
+function ScoreCircle({ correct, total }: { correct: number; total: number }) {
+  const pct = total === 0 ? 0 : correct / total;
+  const rate = Math.round(pct * 100);
+  const size = 160;
+  const strokeWidth = 10;
+  const r = (size - strokeWidth) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - pct);
+  const color = rate >= 80 ? '#10b981' : rate >= 50 ? '#f59e0b' : '#ef4444';
+
+  const message = rate >= 80 ? '훌륭해요! 🎉' : rate >= 50 ? '잘했어요 👍' : '더 연습해요 💪';
+
+  return (
+    <div className="flex flex-col items-center gap-3 py-6">
+      <div className="relative inline-flex items-center justify-center">
+        <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface2)" strokeWidth={strokeWidth} />
+          <circle
+            cx={size / 2} cy={size / 2} r={r}
+            fill="none"
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray={circ}
+            strokeDashoffset={offset}
+            style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.22,1,0.36,1)' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
+          <span className="text-4xl font-bold" style={{ color }}>{rate}%</span>
+          <span className="text-xs text-[var(--text2)]">{correct}/{total}문제</span>
+        </div>
+      </div>
+      <p className="text-base font-semibold text-[var(--text)]">{message}</p>
+    </div>
+  );
+}
 
 export default function QuizResultPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -21,7 +55,6 @@ export default function QuizResultPage() {
   const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
-    // completed_at 확정 설정 (null인 경우에만 업데이트)
     fetch('/api/quiz', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -29,8 +62,8 @@ export default function QuizResultPage() {
     });
 
     fetch(`/api/quiz?session_id=${sessionId}&wrong_only=true`)
-      .then((r) => r.json())
-      .then((res) => {
+      .then(r => r.json())
+      .then(res => {
         if (res.data) {
           setSession(res.data.session);
           setWrongWords(res.data.words ?? []);
@@ -56,75 +89,99 @@ export default function QuizResultPage() {
     const newData = await newRes.json();
 
     if (newData.data) {
-      const wordIds = wrongWords.map((w) => w.id).join(',');
+      const wordIds = wrongWords.map(w => w.id).join(',');
       router.push(`/quiz/${newData.data.id}?word_ids=${wordIds}`);
     }
     setRetrying(false);
   }
 
-  if (loading) return <p className="text-center text-gray-400 mt-16">로딩 중...</p>;
-  if (!session) return <p className="text-center text-gray-400 mt-16">결과를 찾을 수 없습니다.</p>;
+  if (loading) {
+    return (
+      <div className="animate-fade-in space-y-4">
+        <div className="skeleton h-48 rounded-3xl mx-auto w-48 rounded-full" />
+        <div className="skeleton h-12 rounded-xl" />
+        <div className="skeleton h-12 rounded-xl" />
+      </div>
+    );
+  }
 
-  const scoreRate = Math.round((session.correct_count / session.total_count) * 100);
+  if (!session) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <p className="text-[var(--text2)]">결과를 찾을 수 없습니다.</p>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h1 className="text-xl font-bold text-gray-800 mb-6">퀴즈 결과</h1>
+    <div className="animate-fade-in">
+      <h1 className="text-2xl font-bold text-[var(--text)] tracking-tight mb-2">퀴즈 결과</h1>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center mb-6">
-        <p
-          className={`text-6xl font-bold mb-2 ${
-            scoreRate >= 80 ? 'text-green-500' : scoreRate >= 50 ? 'text-yellow-500' : 'text-red-400'
-          }`}
-        >
-          {scoreRate}%
-        </p>
-        <p className="text-gray-500">
-          {session.total_count}문제 중 {session.correct_count}개 정답
-        </p>
+      {/* Score circle */}
+      <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] mb-5" style={{ boxShadow: 'var(--shadow)' }}>
+        <ScoreCircle correct={session.correct_count} total={session.total_count} />
       </div>
 
+      {/* Wrong words */}
       {wrongResults.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-base font-semibold text-gray-700 mb-3">
-            틀린 단어 ({wrongResults.length}개)
-          </h2>
+        <div className="mb-5 animate-slide-up">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-[var(--text)]">틀린 단어</h2>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400">
+              {wrongResults.length}개
+            </span>
+          </div>
           <ul className="space-y-2">
-            {wrongResults.map((r) => (
-              <li key={r.id} className="p-4 bg-white rounded-xl border border-red-200">
-                <div className="flex justify-between">
-                  <p className="font-medium text-gray-800">{r.words?.english}</p>
-                  <p className="text-sm text-gray-500">{r.words?.korean}</p>
+            {wrongResults.map(r => (
+              <li key={r.id} className="px-4 py-3.5 rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-500/5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-[var(--text)]">{r.words?.english}</p>
+                    <p className="text-sm text-[var(--text2)] mt-0.5">{r.words?.korean}</p>
+                  </div>
+                  {r.user_answer && (
+                    <div className="text-right shrink-0">
+                      <p className="text-xs text-[var(--text3)]">내 답</p>
+                      <p className="text-sm text-red-400 font-medium">{r.user_answer}</p>
+                    </div>
+                  )}
                 </div>
-                {r.user_answer && (
-                  <p className="text-xs text-red-400 mt-1">내 답: {r.user_answer}</p>
-                )}
               </li>
             ))}
           </ul>
         </div>
       )}
 
+      {/* Actions */}
       <div className="flex flex-col gap-3">
         {wrongWords.length > 0 && (
           <button
             onClick={handleRetry}
             disabled={retrying}
-            className="w-full min-h-[52px] bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 active:bg-red-700 disabled:opacity-50 transition-colors"
+            className="w-full min-h-[52px] bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-md shadow-red-500/20"
           >
-            {retrying ? '준비 중...' : `틀린 단어 ${wrongWords.length}개 다시 시험`}
+            {retrying ? (
+              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.6"/>
+                </svg>
+                틀린 단어 {wrongWords.length}개 다시 시험
+              </>
+            )}
           </button>
         )}
         <div className="flex gap-3">
           <Link
             href="/quiz"
-            className="flex-1 min-h-[52px] flex items-center justify-center bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 active:bg-blue-700 transition-colors"
+            className="flex-1 min-h-[52px] flex items-center justify-center bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-semibold transition-colors shadow-md shadow-indigo-500/20"
           >
             새 퀴즈
           </Link>
           <Link
             href="/quiz/history"
-            className="flex-1 min-h-[52px] flex items-center justify-center bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 active:bg-gray-300 transition-colors"
+            className="flex-1 min-h-[52px] flex items-center justify-center bg-[var(--surface2)] text-[var(--text)] rounded-xl font-semibold hover:bg-[var(--border)] transition-colors border border-[var(--border)]"
           >
             퀴즈 기록
           </Link>
