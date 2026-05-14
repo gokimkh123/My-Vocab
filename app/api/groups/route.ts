@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { createClient, getAuthUser } from '@/lib/supabase/server';
 import type { ApiResponse, Group } from '@/lib/supabase/types';
 
@@ -16,7 +17,11 @@ export async function GET(): Promise<NextResponse<ApiResponse<Group[]>>> {
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
-  return NextResponse.json({ data, error: null });
+
+  return NextResponse.json(
+    { data, error: null },
+    { headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=120' } }
+  );
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<Group>>> {
@@ -38,6 +43,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     .single();
 
   if (error) return NextResponse.json({ data: null, error: '그룹 생성에 실패했습니다.' }, { status: 500 });
+
+  revalidatePath('/groups');
   return NextResponse.json({ data, error: null }, { status: 201 });
 }
 
@@ -51,7 +58,6 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
 
   if (!id) return NextResponse.json({ data: null, error: 'id가 필요합니다.' }, { status: 400 });
 
-  // 본인 소유 확인
   const { data: group } = await supabase
     .from('groups')
     .select('id')
@@ -61,7 +67,6 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
 
   if (!group) return NextResponse.json({ data: null, error: '삭제 권한이 없습니다.' }, { status: 403 });
 
-  // Delete quiz_results → quiz_sessions → words → group (FK order)
   const { data: sessions } = await supabase
     .from('quiz_sessions')
     .select('id')
@@ -78,5 +83,9 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
 
   const { error } = await supabase.from('groups').delete().eq('id', id).eq('user_id', user.id);
   if (error) return NextResponse.json({ data: null, error: '삭제에 실패했습니다.' }, { status: 500 });
+
+  revalidatePath('/groups');
+  revalidatePath('/quiz');
+  revalidatePath('/quiz/history');
   return NextResponse.json({ data: null, error: null });
 }

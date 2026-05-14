@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { createClient, getAuthUser } from '@/lib/supabase/server';
 import type { ApiResponse, QuizSession, Word } from '@/lib/supabase/types';
 
@@ -150,6 +151,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     .single();
 
   if (error) return NextResponse.json({ data: null, error: '퀴즈 생성에 실패했습니다.' }, { status: 500 });
+
+  revalidatePath('/quiz/history');
   return NextResponse.json({ data, error: null }, { status: 201 });
 }
 
@@ -187,6 +190,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<ApiRespo
       .update({ completed_at: new Date().toISOString() })
       .eq('id', session_id)
       .is('completed_at', null);
+    revalidatePath('/quiz/history');
     return NextResponse.json({ data: null, error: null });
   }
 
@@ -217,6 +221,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<ApiRespo
       .from('quiz_sessions')
       .update({ completed_at: new Date().toISOString() })
       .eq('id', session_id);
+    revalidatePath('/quiz/history');
   }
 
   return NextResponse.json({ data: null, error: null });

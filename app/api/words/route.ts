@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { createClient, getAuthUser } from '@/lib/supabase/server';
 import type { ApiResponse, Word } from '@/lib/supabase/types';
 
@@ -36,7 +37,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
-  return NextResponse.json({ data, error: null });
+  return NextResponse.json(
+    { data, error: null },
+    { headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' } }
+  );
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<Word>>> {
@@ -89,6 +93,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     .single();
 
   if (error) return NextResponse.json({ data: null, error: '단어 추가에 실패했습니다.' }, { status: 500 });
+
+  revalidatePath('/groups');
+  revalidatePath(`/groups/${group_id}`);
   return NextResponse.json({ data, error: null }, { status: 201 });
 }
 
@@ -102,6 +109,13 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
 
   if (!id) return NextResponse.json({ data: null, error: 'id가 필요합니다.' }, { status: 400 });
 
+  const { data: word } = await supabase
+    .from('words')
+    .select('group_id')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single();
+
   const { error } = await supabase
     .from('words')
     .delete()
@@ -109,5 +123,8 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
     .eq('user_id', user.id);
 
   if (error) return NextResponse.json({ data: null, error: '삭제에 실패했습니다.' }, { status: 500 });
+
+  revalidatePath('/groups');
+  if (word?.group_id) revalidatePath(`/groups/${word.group_id}`);
   return NextResponse.json({ data: null, error: null });
 }
