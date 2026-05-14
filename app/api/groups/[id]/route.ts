@@ -14,10 +14,13 @@ export async function GET(
   const supabase = createClient();
   const { data, error } = await supabase
     .from('groups')
-    .select('*')
+    .select('id, name, description, created_at')
     .eq('id', params.id)
     .single();
 
   if (error) return NextResponse.json({ data: null, error: '그룹을 찾을 수 없습니다.' }, { status: 404 });
-  return NextResponse.json({ data, error: null });
+  return NextResponse.json(
+    { data, error: null },
+    { headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' } }
+  );
 }

@@ -10,7 +10,7 @@ export async function GET(): Promise<NextResponse> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('quiz_sessions')
-    .select('*, groups(name)')
+    .select('id, group_id, quiz_type, total_count, correct_count, completed_at, created_at, groups(name)')
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });

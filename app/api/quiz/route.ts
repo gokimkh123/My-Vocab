@@ -52,7 +52,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const wordIds = wordIdsParam.split(',').filter(Boolean);
     const { data: specificWords, error: wordsError } = await supabase
       .from('words')
-      .select('*')
+      .select('id, group_id, english, korean, part_of_speech, example_sentence, created_at')
       .in('id', wordIds);
 
     if (wordsError) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const { data: allWords, error: wordsError } = await supabase
     .from('words')
-    .select('*')
+    .select('id, group_id, english, korean, part_of_speech, example_sentence, created_at')
     .eq('group_id', session.group_id);
 
   if (wordsError) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });

@@ -29,12 +29,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const { data, error } = await supabase
     .from('words')
-    .select('*')
+    .select('id, group_id, english, korean, part_of_speech, example_sentence, created_at')
     .eq('group_id', groupId)
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
-  return NextResponse.json({ data, error: null });
+  return NextResponse.json(
+    { data, error: null },
+    { headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' } }
+  );
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<Word>>> {
