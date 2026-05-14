@@ -105,7 +105,7 @@ export default function GroupDetailPage() {
           <p className="text-sm text-[var(--text3)] mt-1">{words.length}개의 단어</p>
         </div>
         <Link
-          href="/words/add"
+          href={`/words/add?group_id=${id}`}
           className="flex items-center gap-1.5 px-4 min-h-[44px] bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm shadow-indigo-500/20 shrink-0"
         >
           <span className="text-lg leading-none">+</span>

@@ -2,6 +2,7 @@ import { createAuthClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import MobileNav from '@/components/MobileNav';
 import { ToastProvider } from '@/components/Toast';
+import { ScrollFix } from '@/components/ScrollFix';
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const supabase = createAuthClient();
@@ -19,6 +20,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   return (
     <div className="min-h-[100dvh] bg-[var(--bg)]">
       <MobileNav signOut={signOut} />
+      <ScrollFix />
       <ToastProvider>
         <main
           className="max-w-2xl mx-auto px-4"

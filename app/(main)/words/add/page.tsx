@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { Group } from '@/lib/supabase/types';
 import { useToast } from '@/components/Toast';
 
@@ -20,10 +20,12 @@ const LABEL_CLASS = 'block text-sm font-semibold text-[var(--text2)] mb-1.5';
 
 export default function AddWordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const toast = useToast();
   const [groups, setGroups] = useState<Group[]>([]);
   const [form, setForm] = useState({
-    english: '', korean: '', part_of_speech: '', example_sentence: '', group_id: '',
+    english: '', korean: '', part_of_speech: '', example_sentence: '',
+    group_id: searchParams.get('group_id') ?? '',
   });
   const [loading, setLoading] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);

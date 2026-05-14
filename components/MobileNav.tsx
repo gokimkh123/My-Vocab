@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -15,7 +15,23 @@ const tabs = [
 
 export default function MobileNav({ signOut }: Props) {
   const [open, setOpen] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const handler = () => {
+      // iOS에서 키보드가 올라오면 visualViewport.height가 줄어듦
+      setKeyboardOpen(window.innerHeight - vv.height > 150);
+    };
+    vv.addEventListener('resize', handler);
+    vv.addEventListener('scroll', handler);
+    return () => {
+      vv.removeEventListener('resize', handler);
+      vv.removeEventListener('scroll', handler);
+    };
+  }, []);
 
   function isActive(href: string) {
     if (href === '/quiz/history') return pathname === '/quiz/history';
@@ -89,10 +105,13 @@ export default function MobileNav({ signOut }: Props) {
         </div>
       )}
 
-      {/* Bottom tab bar */}
+      {/* Bottom tab bar — 키보드가 열리면 화면 밖으로 숨김 */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--surface)]/95 backdrop-blur-sm border-t border-[var(--border)]"
+        className={`fixed bottom-0 left-0 right-0 z-40 bg-[var(--surface)]/95 backdrop-blur-sm border-t border-[var(--border)] transition-transform duration-200 ease-in-out ${
+          keyboardOpen ? 'translate-y-full' : 'translate-y-0'
+        }`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        aria-hidden={keyboardOpen}
       >
         <div className="flex h-14 max-w-2xl mx-auto">
           {tabs.map(({ href, label, Icon }) => {
