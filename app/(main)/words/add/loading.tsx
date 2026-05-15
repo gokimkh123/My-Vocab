@@ -1,15 +1,16 @@
 export default function Loading() {
   return (
-    <div>
-      <div className="h-7 w-24 bg-gray-200 rounded-lg animate-pulse mb-6" />
-      <div className="space-y-4 bg-white p-6 rounded-xl border border-gray-200">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i}>
-            <div className="h-4 w-20 bg-gray-200 rounded animate-pulse mb-1" />
-            <div className="h-12 w-full bg-gray-100 rounded-lg animate-pulse" />
+    <div className="animate-fade-in">
+      <div className="skeleton h-8 w-28 rounded-xl mb-6" />
+      <div className="space-y-5">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-4">
+            <div className="skeleton h-3 w-16 rounded-md" />
+            <div className="skeleton h-12 w-full rounded-xl" />
+            <div className="skeleton h-12 w-full rounded-xl" />
           </div>
         ))}
-        <div className="h-13 w-full bg-blue-200 rounded-xl animate-pulse" />
+        <div className="skeleton h-[52px] w-full rounded-xl" />
       </div>
     </div>
   );

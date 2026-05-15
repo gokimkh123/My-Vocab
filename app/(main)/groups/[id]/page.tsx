@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import type { Group, Word } from '@/lib/supabase/types';
+import { useState } from 'react';
 import { WordCardSkeleton } from '@/components/Skeleton';
 import { useToast } from '@/components/Toast';
+import { useGroup } from '@/hooks/useGroup';
+import { useWords } from '@/hooks/useWords';
 
 const POS_STYLE: Record<string, string> = {
   noun:      'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
@@ -21,32 +23,16 @@ const POS_LABEL: Record<string, string> = {
 export default function GroupDetailPage() {
   const { id } = useParams<{ id: string }>();
   const toast = useToast();
-  const [group, setGroup] = useState<Group | null>(null);
-  const [words, setWords] = useState<Word[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { group, isLoading: groupLoading, error: groupError } = useGroup(id);
+  const { words, isLoading: wordsLoading, error: wordsError, mutate: mutateWords } = useWords(id);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
-    const [groupRes, wordsRes] = await Promise.all([
-      fetch(`/api/groups/${id}`),
-      fetch(`/api/words?group_id=${id}`),
-    ]);
-    const groupData = await groupRes.json();
-    const wordsData = await wordsRes.json();
+  const loading = groupLoading || wordsLoading;
+  const error = groupError || wordsError;
 
-    if (groupData.error) {
-      setError(groupData.error);
-    } else {
-      setGroup(groupData.data);
-    }
-    if (!wordsData.error) {
-      setWords(wordsData.data ?? []);
-    }
-    setLoading(false);
-  }, [id]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    if (error) toast.show(error, 'error');
+  }, [error, toast]);
 
   async function handleDelete(wordId: string) {
     if (!confirm('이 단어를 삭제할까요?')) return;
@@ -56,7 +42,10 @@ export default function GroupDetailPage() {
     if (data.error) {
       toast.show(data.error, 'error');
     } else {
-      setWords(prev => prev.filter(w => w.id !== wordId));
+      mutateWords(
+        prev => prev ? { ...prev, data: prev.data.filter(w => w.id !== wordId) } : prev,
+        { revalidate: false }
+      );
     }
     setDeletingId(null);
   }
@@ -74,7 +63,7 @@ export default function GroupDetailPage() {
     );
   }
 
-  if (error) {
+  if (error && !group) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <p className="text-[var(--text2)] mb-4">{error}</p>

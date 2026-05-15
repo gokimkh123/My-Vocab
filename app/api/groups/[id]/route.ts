@@ -20,5 +20,8 @@ export async function GET(
     .single();
 
   if (error) return NextResponse.json({ data: null, error: '그룹을 찾을 수 없습니다.' }, { status: 404 });
-  return NextResponse.json({ data, error: null });
+  return NextResponse.json(
+    { data, error: null },
+    { headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=120' } }
+  );
 }

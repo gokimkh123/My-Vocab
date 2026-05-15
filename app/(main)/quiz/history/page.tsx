@@ -1,20 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { HistoryCardSkeleton } from '@/components/Skeleton';
-
-type SessionWithGroup = {
-  id: string;
-  group_id: string;
-  quiz_type: 'en_to_ko' | 'ko_to_en';
-  total_count: number;
-  correct_count: number;
-  completed_at: string | null;
-  created_at: string;
-  groups: { name: string } | null;
-};
+import { useQuizHistory, type SessionWithGroup } from '@/hooks/useQuizHistory';
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -50,20 +40,10 @@ function dotColor(rate: number) {
 
 export default function QuizHistoryPage() {
   const router = useRouter();
-  const [sessions, setSessions] = useState<SessionWithGroup[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { sessions, isLoading: loading, mutate } = useQuizHistory();
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/quiz/history', { cache: 'no-store' })
-      .then(r => r.json())
-      .then(res => {
-        if (res.data) setSessions(res.data);
-        setLoading(false);
-      });
-  }, []);
 
   async function handleRetry(session: SessionWithGroup) {
     setRetryingId(session.id);
@@ -86,7 +66,7 @@ export default function QuizHistoryPage() {
     const newData = await newRes.json();
 
     if (newData.data) {
-      const wordIds = wrongWords.map(w => w.id).join(',');
+      const wordIds = wrongWords.map((w: { id: string }) => w.id).join(',');
       router.push(`/quiz/${newData.data.id}?word_ids=${wordIds}`);
     }
     setRetryingId(null);
@@ -97,7 +77,12 @@ export default function QuizHistoryPage() {
     setDeletingId(id);
     const res = await fetch(`/api/quiz?session_id=${id}`, { method: 'DELETE' });
     const data = await res.json();
-    if (!data.error) setSessions(prev => prev.filter(s => s.id !== id));
+    if (!data.error) {
+      mutate(
+        prev => prev ? { ...prev, data: prev.data.filter(s => s.id !== id) } : prev,
+        { revalidate: false }
+      );
+    }
     setDeletingId(null);
   }
 
