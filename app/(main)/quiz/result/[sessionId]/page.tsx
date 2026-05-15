@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { mutate } from 'swr';
 import type { Word, QuizSession } from '@/lib/supabase/types';
 
 type WrongResult = { id: string; user_answer: string | null; words: Word | null };
@@ -55,10 +56,13 @@ export default function QuizResultPage() {
   const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
+    // 세션 완료 처리 + SWR 히스토리 캐시 즉시 무효화
     fetch('/api/quiz', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: sessionId, complete_session: true }),
+    }).then(() => {
+      mutate('/api/quiz/history');
     });
 
     fetch(`/api/quiz?session_id=${sessionId}&wrong_only=true`)

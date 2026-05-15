@@ -61,12 +61,19 @@ export default function GroupsPage() {
   async function handleDelete(id: string) {
     if (!confirm('단어장을 삭제하면 안에 있는 모든 단어도 삭제됩니다. 계속할까요?')) return;
     setDeletingId(id);
+
+    // Optimistic: 즉시 목록에서 제거
+    mutate(
+      prev => prev ? { ...prev, data: prev.data.filter(g => g.id !== id) } : prev,
+      { revalidate: false }
+    );
+
     const res = await fetch(`/api/groups?id=${id}`, { method: 'DELETE' });
     const data = await res.json();
     if (data.error) {
       toast.show(data.error, 'error');
+      mutate(); // 실패 시 서버 데이터로 복원
     } else {
-      mutate();
       toast.show('단어장을 삭제했습니다.', 'success');
     }
     setDeletingId(null);
@@ -90,7 +97,14 @@ export default function GroupsPage() {
     setName('');
     setDescription('');
     toast.show('단어장을 만들었습니다!', 'success');
-    mutate();
+
+    // 응답에 포함된 새 그룹을 즉시 목록 최상단에 추가
+    mutate(
+      prev => prev && data.data
+        ? { ...prev, data: [data.data, ...prev.data] }
+        : prev,
+      { revalidate: true } // 백그라운드 refetch로 서버 확인
+    );
   }
 
   function closeModal() {

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { mutate } from 'swr';
 import { useToast } from '@/components/Toast';
 import { useGroups } from '@/hooks/useGroups';
 
@@ -77,8 +78,9 @@ export default function AddWordPage() {
       return;
     }
 
+    // SWR 캐시 즉시 무효화 → /groups/[id] 진입 시 최신 단어 목록 fetch
+    await mutate(`/api/words?group_id=${form.group_id}`);
     router.push(`/groups/${form.group_id}`);
-    router.refresh();
   }
 
   const posStyle = form.part_of_speech ? POS_STYLE[form.part_of_speech] : null;
