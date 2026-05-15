@@ -2,23 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Group } from '@/lib/supabase/types';
+import { useGroups } from '@/hooks/useGroups';
 
 export default function QuizSetupPage() {
   const router = useRouter();
-  const [groups, setGroups] = useState<Group[]>([]);
+  const { groups } = useGroups();
   const [groupId, setGroupId] = useState('');
   const [quizType, setQuizType] = useState<'en_to_ko' | 'ko_to_en'>('en_to_ko');
   const [wordCount, setWordCount] = useState(10);
   const [maxCount, setMaxCount] = useState(10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch('/api/groups')
-      .then(r => r.json())
-      .then(res => { if (res.data) setGroups(res.data); });
-  }, []);
 
   useEffect(() => {
     if (!groupId) return;

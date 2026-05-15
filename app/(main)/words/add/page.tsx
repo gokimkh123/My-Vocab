@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Group } from '@/lib/supabase/types';
 import { useToast } from '@/components/Toast';
+import { useGroups } from '@/hooks/useGroups';
 
 const POS_STYLE: Record<string, string> = {
   noun:      'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
@@ -22,7 +22,7 @@ export default function AddWordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
-  const [groups, setGroups] = useState<Group[]>([]);
+  const { groups } = useGroups();
   const [form, setForm] = useState({
     english: '', korean: '', part_of_speech: '', example_sentence: '',
     group_id: searchParams.get('group_id') ?? '',
@@ -30,12 +30,6 @@ export default function AddWordPage() {
   const [loading, setLoading] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch('/api/groups')
-      .then(r => r.json())
-      .then(res => { if (res.data) setGroups(res.data); });
-  }, []);
 
   function set(key: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>

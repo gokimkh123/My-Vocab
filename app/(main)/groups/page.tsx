@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import type { Group } from '@/lib/supabase/types';
 import { GroupCardSkeleton } from '@/components/Skeleton';
 import { useToast } from '@/components/Toast';
+import { useGroups } from '@/hooks/useGroups';
 
 const PALETTES = [
   { bar: 'bg-indigo-500' },
@@ -17,8 +17,7 @@ const PALETTES = [
 
 export default function GroupsPage() {
   const toast = useToast();
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { groups, isLoading: loading, error: groupsError, mutate } = useGroups();
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -27,18 +26,9 @@ export default function GroupsPage() {
   // 키보드 높이 — 바텀시트를 키보드 위로 올리기 위해 사용
   const [sheetBottom, setSheetBottom] = useState(0);
 
-  const fetchGroups = useCallback(async () => {
-    const res = await fetch('/api/groups', { cache: 'no-store' });
-    const data = await res.json();
-    if (data.error) {
-      toast.show(data.error, 'error');
-    } else {
-      setGroups(data.data ?? []);
-    }
-    setLoading(false);
-  }, [toast]);
-
-  useEffect(() => { fetchGroups(); }, [fetchGroups]);
+  useEffect(() => {
+    if (groupsError) toast.show(groupsError, 'error');
+  }, [groupsError, toast]);
 
   // 모달 열릴 때 body 클래스 토글 → CSS로 탭바 숨김
   useEffect(() => {
@@ -76,7 +66,7 @@ export default function GroupsPage() {
     if (data.error) {
       toast.show(data.error, 'error');
     } else {
-      setGroups(prev => prev.filter(g => g.id !== id));
+      mutate();
       toast.show('단어장을 삭제했습니다.', 'success');
     }
     setDeletingId(null);
@@ -100,7 +90,7 @@ export default function GroupsPage() {
     setName('');
     setDescription('');
     toast.show('단어장을 만들었습니다!', 'success');
-    fetchGroups();
+    mutate();
   }
 
   function closeModal() {
