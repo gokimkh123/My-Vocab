@@ -1,3 +1,5 @@
+@import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -43,7 +45,7 @@ html {
 body {
   color: var(--text);
   background: var(--bg);
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'system-ui', 'Helvetica Neue', sans-serif;
+  font-family: 'Pretendard Variable', -apple-system, BlinkMacSystemFont, 'system-ui', 'Helvetica Neue', sans-serif;
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
 }
