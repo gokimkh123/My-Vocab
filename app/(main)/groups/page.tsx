@@ -63,7 +63,7 @@ export default function GroupsPage() {
 
   const sortedGroups = useMemo(() => {
     const arr = [...groups];
-    if (sortBy === 'name') return arr.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    if (sortBy === 'name') return arr.sort((a, b) => a.name.replace(/\s/g, '').localeCompare(b.name.replace(/\s/g, ''), 'ko'));
     if (sortBy === 'word_count') return arr.sort((a, b) => (b.word_count ?? 0) - (a.word_count ?? 0));
     return arr.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [groups, sortBy]);
