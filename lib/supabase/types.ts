@@ -3,6 +3,7 @@ export type Group = {
   name: string;
   description: string | null;
   created_at: string;
+  word_count?: number;
 };
 
 export type Word = {

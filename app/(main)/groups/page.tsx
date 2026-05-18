@@ -1,10 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { GroupCardSkeleton } from '@/components/Skeleton';
 import { useToast } from '@/components/Toast';
 import { useGroups } from '@/hooks/useGroups';
+
+type SortBy = 'name' | 'created_at' | 'word_count';
+
+const SORT_OPTIONS: { value: SortBy; label: string }[] = [
+  { value: 'name', label: '가나다순' },
+  { value: 'created_at', label: '최신순' },
+  { value: 'word_count', label: '단어 많은순' },
+];
 
 const PALETTES = [
   { bar: 'bg-indigo-500' },
@@ -23,32 +31,27 @@ export default function GroupsPage() {
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  // 키보드 높이 — 바텀시트를 키보드 위로 올리기 위해 사용
   const [sheetBottom, setSheetBottom] = useState(0);
+  const [sortBy, setSortBy] = useState<SortBy>('name');
 
   useEffect(() => {
     if (groupsError) toast.show(groupsError, 'error');
   }, [groupsError, toast]);
 
-  // 모달 열릴 때 body 클래스 토글 → CSS로 탭바 숨김
   useEffect(() => {
     if (showModal) document.body.classList.add('modal-open');
     else document.body.classList.remove('modal-open');
     return () => document.body.classList.remove('modal-open');
   }, [showModal]);
 
-  // 모달 열릴 때 visualViewport 감지 → 키보드 높이만큼 시트 위로 이동
   useEffect(() => {
     if (!showModal) { setSheetBottom(0); return; }
     const vv = window.visualViewport;
     if (!vv) return;
-
     const update = () => {
-      // iOS에서 키보드 높이 = window 높이 - visual viewport 높이 - scroll offset
       const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
       setSheetBottom(kb);
     };
-
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
     update();
@@ -58,11 +61,17 @@ export default function GroupsPage() {
     };
   }, [showModal]);
 
+  const sortedGroups = useMemo(() => {
+    const arr = [...groups];
+    if (sortBy === 'name') return arr.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    if (sortBy === 'word_count') return arr.sort((a, b) => (b.word_count ?? 0) - (a.word_count ?? 0));
+    return arr.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [groups, sortBy]);
+
   async function handleDelete(id: string) {
     if (!confirm('단어장을 삭제하면 안에 있는 모든 단어도 삭제됩니다. 계속할까요?')) return;
     setDeletingId(id);
 
-    // Optimistic: 즉시 목록에서 제거
     mutate(
       prev => prev ? { ...prev, data: prev.data.filter(g => g.id !== id) } : prev,
       { revalidate: false }
@@ -72,7 +81,7 @@ export default function GroupsPage() {
     const data = await res.json();
     if (data.error) {
       toast.show(data.error, 'error');
-      mutate(); // 실패 시 서버 데이터로 복원
+      mutate();
     } else {
       toast.show('단어장을 삭제했습니다.', 'success');
     }
@@ -98,12 +107,11 @@ export default function GroupsPage() {
     setDescription('');
     toast.show('단어장을 만들었습니다!', 'success');
 
-    // 응답에 포함된 새 그룹을 즉시 목록 최상단에 추가
     mutate(
       prev => prev && data.data
         ? { ...prev, data: [data.data, ...prev.data] }
         : prev,
-      { revalidate: true } // 백그라운드 refetch로 서버 확인
+      { revalidate: true }
     );
   }
 
@@ -115,7 +123,7 @@ export default function GroupsPage() {
   return (
     <div className="animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-[var(--text)] tracking-tight">단어장</h1>
           {!loading && groups.length > 0 && (
@@ -130,6 +138,25 @@ export default function GroupsPage() {
           <span>새 그룹</span>
         </button>
       </div>
+
+      {/* Sort options */}
+      {!loading && groups.length > 0 && (
+        <div className="flex gap-2 mb-5">
+          {SORT_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setSortBy(opt.value)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                sortBy === opt.value
+                  ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/20'
+                  : 'bg-[var(--surface2)] text-[var(--text2)] hover:bg-[var(--border)]'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (
@@ -161,7 +188,7 @@ export default function GroupsPage() {
       {/* Groups list */}
       {!loading && groups.length > 0 && (
         <ul className="space-y-3 animate-slide-up">
-          {groups.map((group, i) => {
+          {sortedGroups.map((group, i) => {
             const palette = PALETTES[i % PALETTES.length];
             return (
               <li key={group.id} className="flex items-stretch gap-2">
@@ -176,6 +203,7 @@ export default function GroupsPage() {
                     {group.description && (
                       <p className="text-sm text-[var(--text2)] mt-1 line-clamp-1">{group.description}</p>
                     )}
+                    <p className="text-xs text-[var(--text3)] mt-1.5">{group.word_count ?? 0}개의 단어</p>
                   </div>
                 </Link>
                 <button
@@ -200,23 +228,16 @@ export default function GroupsPage() {
       {showModal && (
         <div className="fixed inset-0 z-50" onClick={closeModal}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
-          {/*
-            키보드가 열리면 sheetBottom이 키보드 높이만큼 커져서
-            시트가 키보드 바로 위에 위치함
-          */}
           <div
             className="absolute left-0 right-0 bg-[var(--surface)] rounded-t-3xl shadow-2xl animate-slide-up"
             style={{
               bottom: `${sheetBottom}px`,
               transition: 'bottom 0.2s ease',
-              // 키보드가 없을 때만 safe-area 패딩 적용
               paddingBottom: sheetBottom > 0 ? '16px' : 'env(safe-area-inset-bottom)',
             }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Handle */}
             <div className="w-10 h-1 bg-[var(--border2)] rounded-full mx-auto mt-3 mb-5" />
-
             <div className="px-5 pb-2">
               <h2 className="text-lg font-bold text-[var(--text)] mb-5">새 단어장 만들기</h2>
               <form onSubmit={handleCreate}>
@@ -244,7 +265,6 @@ export default function GroupsPage() {
                     />
                   </div>
                 </div>
-                {/* 버튼은 항상 키보드 바로 위에 위치 */}
                 <div className="flex gap-3 pb-2">
                   <button
                     type="button"

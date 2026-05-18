@@ -10,13 +10,26 @@ export async function GET(): Promise<NextResponse<ApiResponse<Group[]>>> {
   if (!user) return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 });
 
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from('groups')
-    .select('id, name, description, created_at')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
+  const [{ data: groups, error }, { data: wordRows }] = await Promise.all([
+    supabase
+      .from('groups')
+      .select('id, name, description, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('words')
+      .select('group_id')
+      .eq('user_id', user.id),
+  ]);
 
   if (error) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
+
+  const countMap: Record<string, number> = {};
+  for (const w of (wordRows ?? [])) {
+    countMap[w.group_id] = (countMap[w.group_id] ?? 0) + 1;
+  }
+
+  const data = (groups ?? []).map(g => ({ ...g, word_count: countMap[g.id] ?? 0 }));
 
   return NextResponse.json(
     { data, error: null },

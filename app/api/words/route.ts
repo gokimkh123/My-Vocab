@@ -99,6 +99,42 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
   return NextResponse.json({ data, error: null }, { status: 201 });
 }
 
+export async function PATCH(request: NextRequest): Promise<NextResponse<ApiResponse<Word>>> {
+  const user = await getAuthUser();
+  if (!user) return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 });
+
+  const supabase = createClient();
+  const body = await request.json();
+  const { id, english, korean, part_of_speech } = body as {
+    id: string;
+    english: string;
+    korean: string;
+    part_of_speech?: string | null;
+  };
+
+  if (!id || !english?.trim() || !korean?.trim()) {
+    return NextResponse.json({ data: null, error: '필수 항목을 모두 입력해주세요.' }, { status: 400 });
+  }
+
+  const { data, error } = await supabase
+    .from('words')
+    .update({
+      english: english.trim(),
+      korean: korean.trim(),
+      part_of_speech: part_of_speech || null,
+    })
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .select()
+    .single();
+
+  if (error) return NextResponse.json({ data: null, error: '수정에 실패했습니다.' }, { status: 500 });
+
+  revalidatePath('/groups');
+  if (data?.group_id) revalidatePath(`/groups/${data.group_id}`);
+  return NextResponse.json({ data, error: null });
+}
+
 export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResponse<null>>> {
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 });
