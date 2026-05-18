@@ -48,7 +48,8 @@ export default function QuizSessionPage() {
 
   useEffect(() => {
     if (!loading && !feedback) {
-      setTimeout(() => inputRef.current?.focus(), 100);
+      const t = setTimeout(() => inputRef.current?.focus(), 100);
+      return () => clearTimeout(t);
     }
   }, [loading, currentIndex, feedback]);
 
@@ -60,7 +61,8 @@ export default function QuizSessionPage() {
     setSubmitting(true);
 
     const correctAnswer = session.quiz_type === 'en_to_ko' ? currentWord.korean : currentWord.english;
-    const isCorrect = answer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+    const normalize = (s: string) => s.replace(/\s/g, '').toLowerCase();
+    const isCorrect = normalize(answer) === normalize(correctAnswer);
 
     const patchRes = await fetch('/api/quiz', {
       method: 'PATCH',

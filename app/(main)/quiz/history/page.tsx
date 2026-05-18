@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { HistoryCardSkeleton } from '@/components/Skeleton';
 import { useQuizHistory, type SessionWithGroup } from '@/hooks/useQuizHistory';
 
+type WrongEntry = { id: string; user_answer: string | null; words: { english: string; korean: string } | null };
+
 function formatDate(iso: string) {
   const d = new Date(iso);
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
@@ -44,6 +46,24 @@ export default function QuizHistoryPage() {
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [wrongCache, setWrongCache] = useState<Map<string, WrongEntry[]>>(new Map());
+  const [loadingWrong, setLoadingWrong] = useState<string | null>(null);
+
+  async function toggleWrong(sessionId: string) {
+    if (expandedId === sessionId) { setExpandedId(null); return; }
+    setExpandedId(sessionId);
+    if (wrongCache.has(sessionId)) return;
+    setLoadingWrong(sessionId);
+    const res = await fetch(`/api/quiz?session_id=${sessionId}&wrong_only=true`);
+    const data = await res.json();
+    setWrongCache(prev => {
+      const next = new Map(prev);
+      next.set(sessionId, data.data?.results ?? []);
+      return next;
+    });
+    setLoadingWrong(null);
+  }
 
   async function handleRetry(session: SessionWithGroup) {
     setRetryingId(session.id);
@@ -189,7 +209,15 @@ export default function QuizHistoryPage() {
                                 </span>
                                 <span className={`text-xs font-bold ${scoreColor(rate)}`}>{rate}%</span>
                                 {wrongCount > 0 && (
-                                  <span className="text-xs font-medium text-red-400">{wrongCount}개 틀림</span>
+                                  <button
+                                    onClick={() => toggleWrong(s.id)}
+                                    className="flex items-center gap-0.5 text-xs font-medium text-red-400 hover:text-red-500 transition-colors"
+                                  >
+                                    {wrongCount}개 틀림
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${expandedId === s.id ? 'rotate-180' : ''}`}>
+                                      <polyline points="6 9 12 15 18 9"/>
+                                    </svg>
+                                  </button>
                                 )}
                                 {wrongCount === 0 && (
                                   <span className="text-xs font-semibold text-emerald-500">완벽 🎉</span>
@@ -225,6 +253,29 @@ export default function QuizHistoryPage() {
                               </button>
                             </div>
                           </div>
+
+                          {/* Expandable wrong words */}
+                          {wrongCount > 0 && expandedId === s.id && (
+                            <div className="mt-3 pt-3 border-t border-[var(--border)]">
+                              {loadingWrong === s.id ? (
+                                <p className="text-xs text-center text-[var(--text3)] py-1">불러오는 중...</p>
+                              ) : (
+                                <ul className="space-y-1.5">
+                                  {(wrongCache.get(s.id) ?? []).map(r => (
+                                    <li key={r.id} className="flex items-center justify-between gap-2 text-xs px-3 py-2 rounded-xl bg-red-500/5 border border-red-200/60 dark:border-red-900/40">
+                                      <div className="min-w-0">
+                                        <span className="font-semibold text-[var(--text)]">{r.words?.english}</span>
+                                        <span className="text-[var(--text2)]"> = {r.words?.korean}</span>
+                                      </div>
+                                      {r.user_answer && (
+                                        <span className="text-red-400 shrink-0">내 답: {r.user_answer}</span>
+                                      )}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </li>
                     );
