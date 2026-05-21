@@ -52,7 +52,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
   const { english, korean, part_of_speech, example_sentence, group_id } = body as {
     english: string;
     korean: string;
-    part_of_speech?: string;
+    part_of_speech?: string[];
     example_sentence?: string;
     group_id: string;
   };
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     .insert({
       english: english.trim(),
       korean: korean.trim(),
-      part_of_speech: part_of_speech || null,
+      part_of_speech: part_of_speech?.length ? part_of_speech : null,
       example_sentence: example_sentence?.trim() || null,
       group_id,
       user_id: user.id,
@@ -109,7 +109,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<ApiRespo
     id: string;
     english: string;
     korean: string;
-    part_of_speech?: string | null;
+    part_of_speech?: string[] | null;
   };
 
   if (!id || !english?.trim() || !korean?.trim()) {
@@ -121,7 +121,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<ApiRespo
     .update({
       english: english.trim(),
       korean: korean.trim(),
-      part_of_speech: part_of_speech || null,
+      part_of_speech: part_of_speech?.length ? part_of_speech : null,
     })
     .eq('id', id)
     .eq('user_id', user.id)

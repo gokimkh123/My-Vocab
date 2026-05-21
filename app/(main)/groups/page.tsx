@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { GroupCardSkeleton } from '@/components/Skeleton';
 import { useToast } from '@/components/Toast';
 import { useGroups } from '@/hooks/useGroups';
+import type { Group } from '@/lib/supabase/types';
 
 type SortBy = 'name' | 'created_at' | 'word_count';
 
@@ -34,15 +35,22 @@ export default function GroupsPage() {
   const [sheetBottom, setSheetBottom] = useState(0);
   const [sortBy, setSortBy] = useState<SortBy>('name');
 
+  // Edit group name state
+  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
+  const [editGroupName, setEditGroupName] = useState('');
+  const [editGroupDesc, setEditGroupDesc] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editSheetBottom, setEditSheetBottom] = useState(0);
+
   useEffect(() => {
     if (groupsError) toast.show(groupsError, 'error');
   }, [groupsError, toast]);
 
   useEffect(() => {
-    if (showModal) document.body.classList.add('modal-open');
+    if (showModal || !!editingGroup) document.body.classList.add('modal-open');
     else document.body.classList.remove('modal-open');
     return () => document.body.classList.remove('modal-open');
-  }, [showModal]);
+  }, [showModal, editingGroup]);
 
   useEffect(() => {
     if (!showModal) { setSheetBottom(0); return; }
@@ -60,6 +68,23 @@ export default function GroupsPage() {
       vv.removeEventListener('scroll', update);
     };
   }, [showModal]);
+
+  useEffect(() => {
+    if (!editingGroup) { setEditSheetBottom(0); return; }
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setEditSheetBottom(kb);
+    };
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    update();
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, [editingGroup]);
 
   const sortedGroups = useMemo(() => {
     const arr = [...groups];
@@ -118,6 +143,45 @@ export default function GroupsPage() {
   function closeModal() {
     setShowModal(false);
     setSheetBottom(0);
+  }
+
+  function openEditGroupModal(group: Group) {
+    setEditingGroup(group);
+    setEditGroupName(group.name);
+    setEditGroupDesc(group.description ?? '');
+  }
+
+  function closeEditGroupModal() {
+    setEditingGroup(null);
+    setEditSheetBottom(0);
+  }
+
+  async function handleEditGroup(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingGroup) return;
+    setEditSubmitting(true);
+
+    const res = await fetch(`/api/groups/${editingGroup.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: editGroupName, description: editGroupDesc }),
+    });
+    const data = await res.json();
+    setEditSubmitting(false);
+
+    if (data.error) {
+      toast.show(data.error, 'error');
+      return;
+    }
+
+    mutate(
+      prev => prev && data.data
+        ? { ...prev, data: prev.data.map(g => g.id === editingGroup.id ? { ...g, ...data.data } : g) }
+        : prev,
+      { revalidate: false }
+    );
+    toast.show('단어장 이름을 수정했습니다.', 'success');
+    closeEditGroupModal();
   }
 
   return (
@@ -206,22 +270,93 @@ export default function GroupsPage() {
                     <p className="text-xs text-[var(--text3)] mt-1.5">{group.word_count ?? 0}개의 단어</p>
                   </div>
                 </Link>
-                <button
-                  onClick={() => handleDelete(group.id)}
-                  disabled={deletingId === group.id}
-                  className="flex items-center justify-center w-12 rounded-2xl text-[var(--text3)] hover:text-red-400 hover:bg-red-500/10 active:bg-red-500/15 disabled:opacity-40 transition-colors shrink-0 border border-[var(--border)] bg-[var(--surface)]"
-                  aria-label="삭제"
-                >
-                  {deletingId === group.id ? (
-                    <span className="w-4 h-4 border-2 border-[var(--border2)] border-t-[var(--text3)] rounded-full animate-spin" />
-                  ) : (
-                    <TrashIcon />
-                  )}
-                </button>
+                <div className="flex flex-col gap-2 shrink-0">
+                  <button
+                    onClick={() => openEditGroupModal(group)}
+                    className="flex-1 flex items-center justify-center w-12 rounded-2xl text-[var(--text3)] hover:text-indigo-400 hover:bg-indigo-500/10 active:bg-indigo-500/15 transition-colors border border-[var(--border)] bg-[var(--surface)]"
+                    aria-label="수정"
+                  >
+                    <PencilIcon />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(group.id)}
+                    disabled={deletingId === group.id}
+                    className="flex-1 flex items-center justify-center w-12 rounded-2xl text-[var(--text3)] hover:text-red-400 hover:bg-red-500/10 active:bg-red-500/15 disabled:opacity-40 transition-colors border border-[var(--border)] bg-[var(--surface)]"
+                    aria-label="삭제"
+                  >
+                    {deletingId === group.id ? (
+                      <span className="w-4 h-4 border-2 border-[var(--border2)] border-t-[var(--text3)] rounded-full animate-spin" />
+                    ) : (
+                      <TrashIcon />
+                    )}
+                  </button>
+                </div>
               </li>
             );
           })}
         </ul>
+      )}
+
+      {/* Edit group bottom sheet */}
+      {editingGroup && (
+        <div className="fixed inset-0 z-50" onClick={closeEditGroupModal}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+          <div
+            className="absolute left-0 right-0 bg-[var(--surface)] rounded-t-3xl shadow-2xl animate-slide-up"
+            style={{
+              bottom: `${editSheetBottom}px`,
+              transition: 'bottom 0.2s ease',
+              paddingBottom: editSheetBottom > 0 ? '16px' : 'env(safe-area-inset-bottom)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 bg-[var(--border2)] rounded-full mx-auto mt-3 mb-5" />
+            <div className="px-5 pb-2">
+              <h2 className="text-lg font-bold text-[var(--text)] mb-5">단어장 수정</h2>
+              <form onSubmit={handleEditGroup}>
+                <div className="space-y-4 mb-5">
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-semibold text-[var(--text2)]">이름 *</label>
+                    <input
+                      type="text"
+                      value={editGroupName}
+                      onChange={e => setEditGroupName(e.target.value)}
+                      required
+                      autoFocus
+                      className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all min-h-[48px]"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-semibold text-[var(--text2)]">설명 <span className="text-[var(--text3)] font-normal">(선택)</span></label>
+                    <input
+                      type="text"
+                      value={editGroupDesc}
+                      onChange={e => setEditGroupDesc(e.target.value)}
+                      placeholder="어떤 단어들을 모을 건가요?"
+                      className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all min-h-[48px]"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 pb-2">
+                  <button
+                    type="button"
+                    onClick={closeEditGroupModal}
+                    className="flex-1 min-h-[50px] text-sm font-semibold text-[var(--text2)] bg-[var(--surface2)] rounded-xl hover:bg-[var(--border)] transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editSubmitting}
+                    className="flex-1 min-h-[50px] text-sm font-semibold text-white bg-indigo-500 rounded-xl hover:bg-indigo-600 disabled:opacity-50 transition-colors shadow-sm shadow-indigo-500/20"
+                  >
+                    {editSubmitting ? '수정 중...' : '수정 완료'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Bottom sheet modal */}
@@ -287,6 +422,15 @@ export default function GroupsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+    </svg>
   );
 }
 

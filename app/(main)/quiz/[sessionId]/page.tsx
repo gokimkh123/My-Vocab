@@ -116,8 +116,7 @@ export default function QuizSessionPage() {
   const questionText = session.quiz_type === 'en_to_ko' ? currentWord.english : currentWord.korean;
   const correctAnswer = session.quiz_type === 'en_to_ko' ? currentWord.korean : currentWord.english;
   const progress = (currentIndex + 1) / words.length;
-  const posStyle = currentWord.part_of_speech ? (POS_STYLE[currentWord.part_of_speech] ?? '') : null;
-  const posLabel = currentWord.part_of_speech ? (POS_LABEL[currentWord.part_of_speech] ?? currentWord.part_of_speech) : null;
+  const posList = currentWord.part_of_speech?.length ? currentWord.part_of_speech : null;
 
   return (
     <div className="animate-fade-in flex flex-col gap-5">
@@ -144,10 +143,14 @@ export default function QuizSessionPage() {
         style={{ boxShadow: 'var(--shadow)' }}
       >
         <p className="text-3xl font-bold text-[var(--text)] leading-tight break-words">{questionText}</p>
-        {posStyle && posLabel && (
-          <span className={`inline-block mt-3 text-xs font-semibold px-2.5 py-1 rounded-full ${posStyle}`}>
-            {posLabel}
-          </span>
+        {posList && (
+          <div className="flex gap-1.5 justify-center mt-3 flex-wrap">
+            {posList.map(pos => (
+              <span key={pos} className={`text-xs font-semibold px-2.5 py-1 rounded-full ${POS_STYLE[pos] ?? ''}`}>
+                {POS_LABEL[pos] ?? pos}
+              </span>
+            ))}
+          </div>
         )}
       </div>
 

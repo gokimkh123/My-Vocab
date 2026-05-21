@@ -11,7 +11,7 @@ export type Word = {
   group_id: string;
   english: string;
   korean: string;
-  part_of_speech: string | null;
+  part_of_speech: string[] | null;
   example_sentence: string | null;
   created_at: string;
 };

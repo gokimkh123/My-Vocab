@@ -21,7 +21,6 @@ const POS_LABEL: Record<string, string> = {
 };
 
 const POS_OPTIONS = [
-  { value: '', label: '품사 없음' },
   { value: 'noun', label: '명사' },
   { value: 'verb', label: '동사' },
   { value: 'adjective', label: '형용사' },
@@ -38,7 +37,7 @@ export default function GroupDetailPage() {
 
   // Edit modal
   const [editingWord, setEditingWord] = useState<Word | null>(null);
-  const [editForm, setEditForm] = useState({ english: '', korean: '', part_of_speech: '' });
+  const [editForm, setEditForm] = useState({ english: '', korean: '', part_of_speech: [] as string[] });
   const [submitting, setSubmitting] = useState(false);
   const [sheetBottom, setSheetBottom] = useState(0);
 
@@ -86,8 +85,17 @@ export default function GroupDetailPage() {
     setEditForm({
       english: word.english,
       korean: word.korean,
-      part_of_speech: word.part_of_speech ?? '',
+      part_of_speech: word.part_of_speech ?? [],
     });
+  }
+
+  function togglePos(pos: string) {
+    setEditForm(f => ({
+      ...f,
+      part_of_speech: f.part_of_speech.includes(pos)
+        ? f.part_of_speech.filter(p => p !== pos)
+        : [...f.part_of_speech, pos],
+    }));
   }
 
   function closeEditModal() {
@@ -107,7 +115,7 @@ export default function GroupDetailPage() {
         id: editingWord.id,
         english: editForm.english,
         korean: editForm.korean,
-        part_of_speech: editForm.part_of_speech || null,
+        part_of_speech: editForm.part_of_speech.length ? editForm.part_of_speech : null,
       }),
     });
     const data = await res.json();
@@ -225,8 +233,7 @@ export default function GroupDetailPage() {
         <ul className="space-y-3 animate-slide-up">
           {words.map(word => {
             const revealed = revealedIds.has(word.id);
-            const posStyle = word.part_of_speech ? (POS_STYLE[word.part_of_speech] ?? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300') : null;
-            const posLabel = word.part_of_speech ? (POS_LABEL[word.part_of_speech] ?? word.part_of_speech) : null;
+            const posList = word.part_of_speech?.length ? word.part_of_speech : null;
 
             return (
               <li
@@ -241,11 +248,14 @@ export default function GroupDetailPage() {
                 >
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-xl font-bold text-[var(--text)]">{word.english}</p>
-                    {posStyle && posLabel && (
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${posStyle}`}>
-                        {posLabel}
+                    {posList && posList.map(pos => (
+                      <span
+                        key={pos}
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${POS_STYLE[pos] ?? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}
+                      >
+                        {POS_LABEL[pos] ?? pos}
                       </span>
-                    )}
+                    ))}
                   </div>
                   <p className={`mt-1.5 text-[var(--text2)] transition-all duration-200 ${revealed ? '' : 'blur-sm'}`}>
                     {word.korean}
@@ -326,16 +336,26 @@ export default function GroupDetailPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-semibold text-[var(--text2)]">품사</label>
-                    <select
-                      value={editForm.part_of_speech}
-                      onChange={e => setEditForm(f => ({ ...f, part_of_speech: e.target.value }))}
-                      className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all min-h-[48px]"
-                    >
-                      {POS_OPTIONS.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
+                    <label className="block text-sm font-semibold text-[var(--text2)]">품사 <span className="text-[var(--text3)] font-normal">(복수 선택 가능)</span></label>
+                    <div className="flex gap-2 flex-wrap">
+                      {POS_OPTIONS.map(opt => {
+                        const selected = editForm.part_of_speech.includes(opt.value);
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => togglePos(opt.value)}
+                            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors border ${
+                              selected
+                                ? `${POS_STYLE[opt.value]} border-transparent`
+                                : 'bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:bg-[var(--border)]'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-3 pb-2">
