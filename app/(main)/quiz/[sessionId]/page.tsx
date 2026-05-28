@@ -6,6 +6,22 @@ import type { Word, QuizSession } from '@/lib/supabase/types';
 
 type QuizWord = Word & { answered?: boolean; correct?: boolean };
 
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) => Array.from({ length: n + 1 }, (_, j) => i === 0 ? j : j === 0 ? i : 0));
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+// 4글자 이하: 오타 불허, 5~7글자: 1개, 8글자 이상: 2개
+function allowedEdits(len: number): number {
+  if (len <= 4) return 0;
+  if (len <= 7) return 1;
+  return 2;
+}
+
 const POS_STYLE: Record<string, string> = {
   noun:      'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
   verb:      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
@@ -62,7 +78,10 @@ export default function QuizSessionPage() {
 
     const correctAnswer = session.quiz_type === 'en_to_ko' ? currentWord.korean : currentWord.english;
     const normalize = (s: string) => s.replace(/\s/g, '').toLowerCase();
-    const isCorrect = normalize(answer) === normalize(correctAnswer);
+    const normAnswer = normalize(answer);
+    const normCorrect = normalize(correctAnswer);
+    const dist = levenshtein(normAnswer, normCorrect);
+    const isCorrect = dist <= allowedEdits(normCorrect.length);
 
     const patchRes = await fetch('/api/quiz', {
       method: 'PATCH',
