@@ -56,18 +56,20 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (wordIdsParam) {
     const wordIds = wordIdsParam.split(',').filter(Boolean);
-    const { data: specificWords, error: wordsError } = await supabase
-      .from('words')
-      .select('id, group_id, english, korean, part_of_speech, example_sentence, created_at')
-      .in('id', wordIds)
-      .eq('user_id', user.id);
+    // 두 쿼리는 서로 독립 → 병렬 처리
+    const [{ data: specificWords, error: wordsError }, { data: results }] = await Promise.all([
+      supabase
+        .from('words')
+        .select('id, group_id, english, korean, part_of_speech, example_sentence, created_at')
+        .in('id', wordIds)
+        .eq('user_id', user.id),
+      supabase
+        .from('quiz_results')
+        .select('word_id')
+        .eq('session_id', sessionId),
+    ]);
 
     if (wordsError) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
-
-    const { data: results } = await supabase
-      .from('quiz_results')
-      .select('word_id')
-      .eq('session_id', sessionId);
 
     const answeredIds = new Set((results ?? []).map((r: { word_id: string }) => r.word_id));
     const remaining = (specificWords as Word[]).filter(w => !answeredIds.has(w.id));
@@ -76,21 +78,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ data: { session, words: toShow } });
   }
 
-  const { data: results } = await supabase
-    .from('quiz_results')
-    .select('word_id')
-    .eq('session_id', sessionId);
-
-  const answeredWordIds = new Set((results ?? []).map((r: { word_id: string }) => r.word_id));
-
-  const { data: allWords, error: wordsError } = await supabase
-    .from('words')
-    .select('id, group_id, english, korean, part_of_speech, example_sentence, created_at')
-    .eq('group_id', session.group_id)
-    .eq('user_id', user.id);
+  const [{ data: results }, { data: allWords, error: wordsError }] = await Promise.all([
+    supabase
+      .from('quiz_results')
+      .select('word_id')
+      .eq('session_id', sessionId),
+    supabase
+      .from('words')
+      .select('id, group_id, english, korean, part_of_speech, example_sentence, created_at')
+      .eq('group_id', session.group_id)
+      .eq('user_id', user.id),
+  ]);
 
   if (wordsError) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
 
+  const answeredWordIds = new Set((results ?? []).map((r: { word_id: string }) => r.word_id));
   const shuffled = shuffle(allWords as Word[]).slice(0, session.total_count);
   const remaining = shuffled.filter(w => !answeredWordIds.has(w.id));
 
@@ -179,54 +181,57 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<ApiRespo
     return NextResponse.json({ data: null, error: 'session_id가 필요합니다.' }, { status: 400 });
   }
 
-  // 본인 소유 확인
-  const { data: sessionCheck } = await supabase
-    .from('quiz_sessions')
-    .select('id, correct_count, total_count')
-    .eq('id', session_id)
-    .eq('user_id', user.id)
-    .single();
-
-  if (!sessionCheck) return NextResponse.json({ data: null, error: '접근 권한이 없습니다.' }, { status: 403 });
-
   if (complete_session) {
+    // user_id 조건으로 ownership 보장. select 없이 한 번에 처리.
     await supabase
       .from('quiz_sessions')
       .update({ completed_at: new Date().toISOString() })
       .eq('id', session_id)
+      .eq('user_id', user.id)
       .is('completed_at', null);
     revalidatePath('/quiz/history');
     return NextResponse.json({ data: null, error: null });
   }
 
-  const { error: resultError } = await supabase.from('quiz_results').insert({
-    session_id,
-    word_id,
-    is_correct,
-    user_answer,
-    user_id: user.id,
-  });
+  // ownership 체크 + 현재 상태 조회 + 결과 insert를 병렬 실행.
+  // insert에 user_id가 들어가므로 RLS·ownership 모두 안전.
+  const [{ data: sessionCheck }, { error: resultError }] = await Promise.all([
+    supabase
+      .from('quiz_sessions')
+      .select('id, correct_count, total_count')
+      .eq('id', session_id)
+      .eq('user_id', user.id)
+      .single(),
+    supabase.from('quiz_results').insert({
+      session_id,
+      word_id,
+      is_correct,
+      user_answer,
+      user_id: user.id,
+    }),
+  ]);
 
+  if (!sessionCheck) return NextResponse.json({ data: null, error: '접근 권한이 없습니다.' }, { status: 403 });
   if (resultError) return NextResponse.json({ data: null, error: '저장에 실패했습니다.' }, { status: 500 });
 
-  if (is_correct) {
-    await supabase
-      .from('quiz_sessions')
-      .update({ correct_count: (sessionCheck.correct_count ?? 0) + 1 })
-      .eq('id', session_id);
-  }
+  // answered_count는 sessionCheck 시점 + 방금 insert한 1건 = correct_count + (이미 풀린 오답 수) + 1
+  // 정확한 값은 쿼리해야 하지만, 마지막 문제 판단만 필요하므로 count(*) head:true로 가볍게.
+  const newCorrect = is_correct ? (sessionCheck.correct_count ?? 0) + 1 : (sessionCheck.correct_count ?? 0);
 
-  const { data: results } = await supabase
+  const { count: answeredCount } = await supabase
     .from('quiz_results')
-    .select('id')
+    .select('*', { count: 'exact', head: true })
     .eq('session_id', session_id);
 
-  if ((results?.length ?? 0) >= sessionCheck.total_count) {
-    await supabase
-      .from('quiz_sessions')
-      .update({ completed_at: new Date().toISOString() })
-      .eq('id', session_id);
-    revalidatePath('/quiz/history');
+  const isComplete = (answeredCount ?? 0) >= sessionCheck.total_count;
+
+  // 정답 카운트 업데이트 + (필요시) 완료 처리를 한 번에
+  if (is_correct || isComplete) {
+    const patch: { correct_count?: number; completed_at?: string } = {};
+    if (is_correct) patch.correct_count = newCorrect;
+    if (isComplete) patch.completed_at = new Date().toISOString();
+    await supabase.from('quiz_sessions').update(patch).eq('id', session_id);
+    if (isComplete) revalidatePath('/quiz/history');
   }
 
   return NextResponse.json({ data: null, error: null });

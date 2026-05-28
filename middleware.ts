@@ -47,7 +47,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // 추가 정적 자산(manifest, sw, woff2)도 매칭에서 제외 → 미들웨어 호출 자체를 절약
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|icons|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|workbox-.*\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2)$).*)',
   ],
 };

@@ -67,25 +67,26 @@ export default function QuizHistoryPage() {
 
   async function handleRetry(session: SessionWithGroup) {
     setRetryingId(session.id);
+    const wrongCount = session.total_count - session.correct_count;
+    if (wrongCount === 0) { setRetryingId(null); return; }
 
-    const wrongRes = await fetch(`/api/quiz?session_id=${session.id}&wrong_only=true`);
-    const wrongData = await wrongRes.json();
+    // total_count는 세션에서 바로 계산 → 새 세션 POST와 틀린 단어 GET을 동시에 시작
+    const [wrongRes, newRes] = await Promise.all([
+      fetch(`/api/quiz?session_id=${session.id}&wrong_only=true`),
+      fetch('/api/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          group_id: session.group_id,
+          quiz_type: session.quiz_type,
+          total_count: wrongCount,
+        }),
+      }),
+    ]);
+    const [wrongData, newData] = await Promise.all([wrongRes.json(), newRes.json()]);
     const wrongWords: { id: string }[] = wrongData.data?.words ?? [];
 
-    if (wrongWords.length === 0) { setRetryingId(null); return; }
-
-    const newRes = await fetch('/api/quiz', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        group_id: session.group_id,
-        quiz_type: session.quiz_type,
-        total_count: wrongWords.length,
-      }),
-    });
-    const newData = await newRes.json();
-
-    if (newData.data) {
+    if (newData.data && wrongWords.length > 0) {
       const wordIds = wrongWords.map((w: { id: string }) => w.id).join(',');
       router.push(`/quiz/${newData.data.id}?word_ids=${wordIds}`);
     }

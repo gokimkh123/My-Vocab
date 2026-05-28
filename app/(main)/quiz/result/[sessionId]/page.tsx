@@ -56,14 +56,13 @@ export default function QuizResultPage() {
   const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
-    // 세션 완료 처리 + SWR 히스토리 캐시 즉시 무효화
+    // 완료 처리는 fire-and-forget — 결과 조회와 완전히 독립적으로 병렬 진행
     fetch('/api/quiz', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
       body: JSON.stringify({ session_id: sessionId, complete_session: true }),
-    }).then(() => {
-      mutate('/api/quiz/history');
-    });
+    }).then(() => mutate('/api/quiz/history')).catch(() => {});
 
     fetch(`/api/quiz?session_id=${sessionId}&wrong_only=true`)
       .then(r => r.json())
@@ -81,6 +80,7 @@ export default function QuizResultPage() {
     if (!session || wrongWords.length === 0) return;
     setRetrying(true);
 
+    // wrongWords는 이미 상태에 있음 — 새 세션 POST 한 번이면 충분
     const newRes = await fetch('/api/quiz', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -95,8 +95,9 @@ export default function QuizResultPage() {
     if (newData.data) {
       const wordIds = wrongWords.map(w => w.id).join(',');
       router.push(`/quiz/${newData.data.id}?word_ids=${wordIds}`);
+    } else {
+      setRetrying(false);
     }
-    setRetrying(false);
   }
 
   if (loading) {

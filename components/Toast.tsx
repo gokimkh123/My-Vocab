@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 
 type ToastType = 'success' | 'error' | 'info';
 type ToastItem = { id: number; message: string; type: ToastType; exiting?: boolean };
@@ -18,16 +18,33 @@ const BAR: Record<ToastType, string> = {
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const idRef = useRef(0);
+  const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
+
+  useEffect(() => {
+    const set = timers.current;
+    return () => {
+      set.forEach(clearTimeout);
+      set.clear();
+    };
+  }, []);
 
   const dismiss = useCallback((id: number) => {
     setItems(p => p.map(t => t.id === id ? { ...t, exiting: true } : t));
-    setTimeout(() => setItems(p => p.filter(t => t.id !== id)), 280);
+    const t = setTimeout(() => {
+      setItems(p => p.filter(item => item.id !== id));
+      timers.current.delete(t);
+    }, 280);
+    timers.current.add(t);
   }, []);
 
   const show = useCallback((message: string, type: ToastType = 'info') => {
     const id = ++idRef.current;
     setItems(p => [...p.slice(-2), { id, message, type }]);
-    setTimeout(() => dismiss(id), 3200);
+    const t = setTimeout(() => {
+      dismiss(id);
+      timers.current.delete(t);
+    }, 3200);
+    timers.current.add(t);
   }, [dismiss]);
 
   return (

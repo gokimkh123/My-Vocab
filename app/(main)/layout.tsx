@@ -4,12 +4,8 @@ import MobileNav from '@/components/MobileNav';
 import { ToastProvider } from '@/components/Toast';
 import { ScrollFix } from '@/components/ScrollFix';
 
-export default async function MainLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createAuthClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) redirect('/login');
-
+// 인증 체크는 middleware.ts가 이미 처리 — 여기서 중복 호출하면 매 페이지 진입마다 Supabase Auth 왕복 추가됨
+export default function MainLayout({ children }: { children: React.ReactNode }) {
   async function signOut() {
     'use server';
     const supabase = createAuthClient();

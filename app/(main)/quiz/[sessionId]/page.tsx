@@ -45,7 +45,6 @@ export default function QuizSessionPage() {
   const [answer, setAnswer] = useState('');
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const url = wordIdsParam
@@ -71,10 +70,9 @@ export default function QuizSessionPage() {
 
   const currentWord = words[currentIndex];
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!currentWord || !session) return;
-    setSubmitting(true);
 
     const correctAnswer = session.quiz_type === 'en_to_ko' ? currentWord.korean : currentWord.english;
     const normalize = (s: string) => s.replace(/\s/g, '').toLowerCase();
@@ -83,25 +81,23 @@ export default function QuizSessionPage() {
     const dist = levenshtein(normAnswer, normCorrect);
     const isCorrect = dist <= allowedEdits(normCorrect.length);
 
-    const patchRes = await fetch('/api/quiz', {
+    // 정답 판정은 클라이언트에서 즉시 끝나므로 UI를 먼저 갱신하고 네트워크는 fire-and-forget
+    setFeedback(isCorrect ? 'correct' : 'wrong');
+
+    fetch('/api/quiz', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
+      // keepalive: 페이지 이동/언로드 중에도 요청이 살아남도록
+      keepalive: true,
       body: JSON.stringify({
         session_id: sessionId,
         word_id: currentWord.id,
         is_correct: isCorrect,
         user_answer: answer.trim(),
       }),
+    }).catch(() => {
+      // 단일 사용자 환경에서는 일시적 실패를 무시 (다음 답안 제출 시 다시 누적됨).
     });
-    const patchData = await patchRes.json();
-    if (patchData.error) {
-      alert(`저장 오류: ${patchData.error}`);
-      setSubmitting(false);
-      return;
-    }
-
-    setFeedback(isCorrect ? 'correct' : 'wrong');
-    setSubmitting(false);
   }
 
   function handleNext() {
@@ -220,12 +216,10 @@ export default function QuizSessionPage() {
           />
           <button
             type="submit"
-            disabled={submitting || !answer.trim()}
+            disabled={!answer.trim()}
             className="w-full min-h-[52px] bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-xl font-semibold transition-colors disabled:opacity-40 shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2"
           >
-            {submitting ? (
-              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : '확인'}
+            확인
           </button>
         </form>
       )}
