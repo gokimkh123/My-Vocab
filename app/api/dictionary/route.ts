@@ -6,10 +6,13 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const DICT_API = 'https://api.dictionaryapi.dev/api/v2/entries/en';
+// UI에 칩이 있는 품사만 추천 (우선순위 순). 그 외 품사는 매핑할 칩이 없어 무시.
 const POS_PRIORITY = ['noun', 'verb', 'adjective', 'adverb'];
 
+type DictResult = { pos: string[]; phonetic: string | null; example: string | null };
+
 const CACHE_MAX = 500;
-const cache = new Map<string, { pos: string | null }>();
+const cache = new Map<string, DictResult>();
 
 function getCached(key: string) {
   const v = cache.get(key);
@@ -20,7 +23,7 @@ function getCached(key: string) {
   return v;
 }
 
-function setCached(key: string, value: { pos: string | null }) {
+function setCached(key: string, value: DictResult) {
   if (cache.size >= CACHE_MAX) {
     const oldest = cache.keys().next().value;
     if (oldest !== undefined) cache.delete(oldest);
@@ -44,7 +47,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const cached = getCached(key);
   if (cached) {
     return NextResponse.json(
-      { part_of_speech: cached.pos },
+      { part_of_speech: cached.pos, phonetic: cached.phonetic, example: cached.example },
       { headers: { 'Cache-Control': 'private, max-age=86400, immutable', 'X-Cache': 'HIT' } }
     );
   }
@@ -61,27 +64,41 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }).finally(() => clearTimeout(timeout));
 
     if (!res.ok) {
-      setCached(key, { pos: null });
+      const empty: DictResult = { pos: [], phonetic: null, example: null };
+      setCached(key, empty);
       return NextResponse.json(
-        { part_of_speech: null, error: '단어를 찾을 수 없습니다.' },
+        { part_of_speech: [], phonetic: null, example: null, error: '단어를 찾을 수 없습니다.' },
         { headers: { 'Cache-Control': 'private, max-age=3600' } }
       );
     }
 
     const data = await res.json();
-    const meanings: { partOfSpeech: string }[] = data[0]?.meanings ?? [];
+    type Def = { example?: string };
+    type Meaning = { partOfSpeech: string; definitions?: Def[] };
+    const entry = data[0] ?? {};
+    const meanings: Meaning[] = entry.meanings ?? [];
 
-    const found = POS_PRIORITY.find((pos) =>
-      meanings.some((m) => m.partOfSpeech === pos)
-    );
-    const pos = found ?? meanings[0]?.partOfSpeech ?? null;
+    // 칩이 있는 품사를 우선순위 순으로 모두 추천
+    const pos = POS_PRIORITY.filter((p) => meanings.some((m) => m.partOfSpeech === p));
 
-    setCached(key, { pos });
+    const phonetic: string | null =
+      entry.phonetic ||
+      (entry.phonetics ?? []).map((p: { text?: string }) => p.text).find((t: string | undefined) => !!t) ||
+      null;
+
+    let example: string | null = null;
+    for (const m of meanings) {
+      const ex = (m.definitions ?? []).find((d) => d.example)?.example;
+      if (ex) { example = ex; break; }
+    }
+
+    const result: DictResult = { pos, phonetic, example };
+    setCached(key, result);
     return NextResponse.json(
-      { part_of_speech: pos },
+      { part_of_speech: pos, phonetic, example },
       { headers: { 'Cache-Control': 'private, max-age=86400, immutable', 'X-Cache': 'MISS' } }
     );
   } catch {
-    return NextResponse.json({ part_of_speech: null, error: '사전 API 오류' }, { status: 502 });
+    return NextResponse.json({ part_of_speech: [], phonetic: null, example: null, error: '사전 API 오류' }, { status: 502 });
   }
 }

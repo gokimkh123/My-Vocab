@@ -72,12 +72,14 @@ export default function QuizSessionPage() {
   const searchParams = useSearchParams();
   const wordIdsParam = searchParams.get('word_ids');
   const inputRef = useRef<HTMLInputElement>(null);
+  const nextBtnRef = useRef<HTMLButtonElement>(null);
 
   const [session, setSession] = useState<QuizSession | null>(null);
   const [words, setWords] = useState<QuizWord[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answer, setAnswer] = useState('');
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+  const [exactMatch, setExactMatch] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -95,11 +97,14 @@ export default function QuizSessionPage() {
       });
   }, [sessionId, wordIdsParam]);
 
+  // 입력 중엔 입력칸, 정답 확인 후엔 '다음' 버튼에 포커스 → Enter로 바로 다음 문제
   useEffect(() => {
-    if (!loading && !feedback) {
-      const t = setTimeout(() => inputRef.current?.focus(), 100);
-      return () => clearTimeout(t);
-    }
+    if (loading) return;
+    const t = setTimeout(() => {
+      if (feedback) nextBtnRef.current?.focus();
+      else inputRef.current?.focus();
+    }, 100);
+    return () => clearTimeout(t);
   }, [loading, currentIndex, feedback]);
 
   const currentWord = words[currentIndex];
@@ -110,6 +115,8 @@ export default function QuizSessionPage() {
 
     const correctAnswer = session.quiz_type === 'en_to_ko' ? currentWord.korean : currentWord.english;
     const isCorrect = checkAnswer(answer, correctAnswer);
+    // 오타 허용으로 맞은 경우(정확히 일치하진 않음)엔 정확한 철자를 보여주기 위해 기록
+    setExactMatch(buildCandidates(correctAnswer).includes(normalize(answer)));
 
     // 정답 판정은 클라이언트에서 즉시 끝나므로 UI를 먼저 갱신하고 네트워크는 fire-and-forget
     setFeedback(isCorrect ? 'correct' : 'wrong');
@@ -137,6 +144,12 @@ export default function QuizSessionPage() {
       router.push(`/quiz/result/${sessionId}`);
     } else {
       setCurrentIndex(i => i + 1);
+    }
+  }
+
+  function handleQuit() {
+    if (confirm('퀴즈를 끝내고 지금까지 결과를 볼까요?')) {
+      router.push(`/quiz/result/${sessionId}`);
     }
   }
 
@@ -169,9 +182,17 @@ export default function QuizSessionPage() {
       <div>
         <div className="flex items-center justify-between text-sm text-[var(--text2)] mb-2">
           <span className="font-semibold text-[var(--text)]">{currentIndex + 1} <span className="text-[var(--text3)] font-normal">/ {words.length}</span></span>
-          <span className="text-xs px-2 py-1 rounded-full bg-[var(--surface2)] font-medium">
-            {session.quiz_type === 'en_to_ko' ? '영→한' : '한→영'}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs px-2 py-1 rounded-full bg-[var(--surface2)] font-medium">
+              {session.quiz_type === 'en_to_ko' ? '영→한' : '한→영'}
+            </span>
+            <button
+              onClick={handleQuit}
+              className="text-xs px-2 py-1 rounded-full text-[var(--text3)] hover:text-red-400 hover:bg-red-500/10 active:bg-red-500/15 transition-colors"
+            >
+              끝내기
+            </button>
+          </div>
         </div>
         <div className="h-1.5 bg-[var(--surface2)] rounded-full overflow-hidden">
           <div
@@ -208,9 +229,14 @@ export default function QuizSessionPage() {
               : 'bg-red-500/10 border-red-500/30'
           }`}>
             {feedback === 'correct' ? (
-              <div className="flex items-center justify-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-white text-xs font-bold shrink-0">✓</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">정답!</span>
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-white text-xs font-bold shrink-0">✓</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">정답!</span>
+                </div>
+                {!exactMatch && (
+                  <p className="text-xs text-[var(--text2)]">정확한 답: <span className="font-semibold text-[var(--text)]">{correctAnswer}</span></p>
+                )}
               </div>
             ) : (
               <>
@@ -225,6 +251,7 @@ export default function QuizSessionPage() {
             )}
           </div>
           <button
+            ref={nextBtnRef}
             onClick={handleNext}
             className="w-full min-h-[52px] bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-xl font-semibold transition-colors shadow-md shadow-indigo-500/20"
           >
