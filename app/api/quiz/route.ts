@@ -17,6 +17,18 @@ function shuffle<T>(arr: T[]): T[] {
 // 퀴즈 화면이 실제로 쓰는 컬럼만 — example_sentence(긴 텍스트)/created_at/group_id 제외해 전송량 절감
 const QUIZ_COLS = 'id, english, korean, part_of_speech';
 
+// arr에서 무작위 k개 선택. 부분 Fisher-Yates라 전체를 섞지 않음 (난수·스왑 O(k), 전체 셔플 O(n) 회피).
+function sample<T>(arr: T[], k: number): T[] {
+  const result = arr.slice();
+  const count = Math.min(k, result.length);
+  for (let i = 0; i < count; i++) {
+    const j = i + Math.floor(Math.random() * (result.length - i));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  result.length = count;
+  return result;
+}
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 });
@@ -100,7 +112,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const allIds = (idRows ?? []).map((r: { id: string }) => r.id);
   // 미답 단어 우선으로 셔플 후 출제 수만큼 선택 (모두 답했으면 전체에서 다시)
   const pool = allIds.filter(id => !answeredWordIds.has(id));
-  const pickedIds = shuffle(pool.length > 0 ? pool : allIds).slice(0, session.total_count);
+  const pickedIds = sample(pool.length > 0 ? pool : allIds, session.total_count);
 
   // 2단계: 실제 출제할 단어만 전체 조회
   const { data: picked, error: wordsError } = await supabase

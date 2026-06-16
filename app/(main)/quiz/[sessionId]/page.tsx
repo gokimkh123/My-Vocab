@@ -6,13 +6,25 @@ import type { Word, QuizSession } from '@/lib/supabase/types';
 
 type QuizWord = Word & { answered?: boolean; correct?: boolean };
 
-function levenshtein(a: string, b: string): number {
-  const m = a.length, n = b.length;
-  const dp = Array.from({ length: m + 1 }, (_, i) => Array.from({ length: n + 1 }, (_, j) => i === 0 ? j : j === 0 ? i : 0));
-  for (let i = 1; i <= m; i++)
-    for (let j = 1; j <= n; j++)
-      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
-  return dp[m][n];
+// 편집거리가 max 이하인지만 판정 (정답 체크엔 dist<=max 여부만 필요).
+// 길이차 > max면 즉시 false (편집거리 ≥ 길이차, 수학적 사실). 메모리는 O(min(m,n)) 롤링 1D 배열.
+function isWithinEdits(a: string, b: string, max: number): boolean {
+  if (Math.abs(a.length - b.length) > max) return false;
+  if (a.length > b.length) { const t = a; a = b; b = t; } // 짧은 쪽을 열로 → 배열 최소화
+  const cols = a.length;
+  const row = Array.from({ length: cols + 1 }, (_, i) => i);
+  for (let j = 1; j <= b.length; j++) {
+    let diag = row[0];       // dp[i-1][j-1]
+    row[0] = j;              // dp[0][j]
+    for (let i = 1; i <= cols; i++) {
+      const prev = row[i];   // dp[i][j-1] — 다음 칸의 diag가 됨
+      row[i] = a[i - 1] === b[j - 1]
+        ? diag
+        : 1 + Math.min(diag, row[i], row[i - 1]);
+      diag = prev;
+    }
+  }
+  return row[cols] <= max;
 }
 
 // 4글자 이하: 오타 불허, 5~7글자: 1개, 8글자 이상: 2개
@@ -41,7 +53,7 @@ function buildCandidates(correct: string): string[] {
 function checkAnswer(userAnswer: string, correct: string): boolean {
   const normUser = normalize(userAnswer);
   if (!normUser) return false;
-  return buildCandidates(correct).some(c => levenshtein(normUser, c) <= allowedEdits(c.length));
+  return buildCandidates(correct).some(c => isWithinEdits(normUser, c, allowedEdits(c.length)));
 }
 
 const POS_STYLE: Record<string, string> = {

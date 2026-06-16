@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { HistoryCardSkeleton } from '@/components/Skeleton';
@@ -107,13 +107,13 @@ export default function QuizHistoryPage() {
     setDeletingId(null);
   }
 
-  const sorted = [...sessions].sort((a, b) => {
+  const sorted = useMemo(() => [...sessions].sort((a, b) => {
     const ta = new Date(a.completed_at ?? a.created_at).getTime();
     const tb = new Date(b.completed_at ?? b.created_at).getTime();
     return sortAsc ? ta - tb : tb - ta;
-  });
+  }), [sessions, sortAsc]);
 
-  const grouped = groupByDate(sorted);
+  const grouped = useMemo(() => groupByDate(sorted), [sorted]);
 
   return (
     <div className="animate-fade-in">
