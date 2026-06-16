@@ -22,6 +22,28 @@ function allowedEdits(len: number): number {
   return 2;
 }
 
+const normalize = (s: string) => s.replace(/\s/g, '').toLowerCase();
+
+// "어휘, 단어" / "color / colour" 처럼 여러 뜻이 있으면 하나만 맞아도 정답.
+// 괄호 부연설명(예: "사과(과일)")은 제거한 형태도 후보에 포함.
+function buildCandidates(correct: string): string[] {
+  const set = new Set<string>();
+  for (const part of correct.split(/[,/;·、]/)) {
+    const raw = normalize(part);
+    if (raw) set.add(raw);
+    const stripped = normalize(part.replace(/\([^)]*\)/g, ''));
+    if (stripped) set.add(stripped);
+  }
+  if (set.size === 0) set.add(normalize(correct));
+  return Array.from(set);
+}
+
+function checkAnswer(userAnswer: string, correct: string): boolean {
+  const normUser = normalize(userAnswer);
+  if (!normUser) return false;
+  return buildCandidates(correct).some(c => levenshtein(normUser, c) <= allowedEdits(c.length));
+}
+
 const POS_STYLE: Record<string, string> = {
   noun:      'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
   verb:      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
@@ -75,11 +97,7 @@ export default function QuizSessionPage() {
     if (!currentWord || !session) return;
 
     const correctAnswer = session.quiz_type === 'en_to_ko' ? currentWord.korean : currentWord.english;
-    const normalize = (s: string) => s.replace(/\s/g, '').toLowerCase();
-    const normAnswer = normalize(answer);
-    const normCorrect = normalize(correctAnswer);
-    const dist = levenshtein(normAnswer, normCorrect);
-    const isCorrect = dist <= allowedEdits(normCorrect.length);
+    const isCorrect = checkAnswer(answer, correctAnswer);
 
     // 정답 판정은 클라이언트에서 즉시 끝나므로 UI를 먼저 갱신하고 네트워크는 fire-and-forget
     setFeedback(isCorrect ? 'correct' : 'wrong');

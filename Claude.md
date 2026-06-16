@@ -46,10 +46,13 @@ app/
 
 ## DB 스키마 (Supabase)
 
+> 모든 테이블에 `user_id uuid`가 있고, 모든 API 쿼리는 `.eq('user_id', auth uid)`로 본인 데이터만 다룬다. `part_of_speech`는 복수 품사를 위해 `text[]` 배열이다.
+
 ### groups 테이블
 ```sql
 create table groups (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
   name text not null,              -- 예: "토익 단어장", "LC 단어장"
   description text,
   created_at timestamptz default now()
@@ -60,10 +63,11 @@ create table groups (
 ```sql
 create table words (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
   group_id uuid references groups(id) on delete cascade,
   english text not null,
   korean text not null,
-  part_of_speech text,             -- noun, verb, adjective, adverb 등
+  part_of_speech text[],           -- 복수 선택 가능: {noun, verb, adjective, adverb}
   example_sentence text,
   created_at timestamptz default now()
 );
@@ -73,6 +77,7 @@ create table words (
 ```sql
 create table quiz_sessions (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
   group_id uuid references groups(id),
   quiz_type text not null,         -- 'en_to_ko' | 'ko_to_en'
   total_count int not null,
@@ -86,6 +91,7 @@ create table quiz_sessions (
 ```sql
 create table quiz_results (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
   session_id uuid references quiz_sessions(id) on delete cascade,
   word_id uuid references words(id),
   is_correct boolean not null,

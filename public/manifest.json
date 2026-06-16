@@ -4,8 +4,8 @@
   "description": "나만의 영어 단어장",
   "start_url": "/groups",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#3b82f6",
+  "background_color": "#f6f5ff",
+  "theme_color": "#6366f1",
   "orientation": "portrait",
   "icons": [
     {

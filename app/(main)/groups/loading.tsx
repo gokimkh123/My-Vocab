@@ -1,18 +1,18 @@
+import { GroupCardSkeleton } from '@/components/Skeleton';
+
 export default function Loading() {
   return (
-    <div>
+    <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-4">
-        <div className="h-7 w-16 bg-gray-200 rounded-lg animate-pulse" />
-        <div className="h-10 w-20 bg-gray-200 rounded-lg animate-pulse" />
+        <div className="skeleton h-7 w-20 rounded-xl" />
+        <div className="skeleton h-11 w-24 rounded-xl" />
       </div>
-      <ul className="space-y-3">
-        {[0, 1, 2, 3].map((i) => (
-          <li key={i} className="flex items-center gap-2">
-            <div className="flex-1 h-16 bg-white rounded-xl border border-gray-200 animate-pulse" />
-            <div className="w-11 h-11 bg-gray-100 rounded-lg animate-pulse shrink-0" />
-          </li>
-        ))}
-      </ul>
+      <div className="flex gap-2 mb-5">
+        {[1, 2, 3].map(i => <div key={i} className="skeleton h-7 w-20 rounded-lg" />)}
+      </div>
+      <div className="space-y-3">
+        {[1, 2, 3].map(i => <GroupCardSkeleton key={i} />)}
+      </div>
     </div>
   );
 }

@@ -238,7 +238,7 @@ export default function GroupDetailPage() {
             return (
               <li
                 key={word.id}
-                className="flex items-stretch rounded-2xl border border-[var(--border)] bg-[var(--surface)] hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors min-h-[80px]"
+                className="flex items-stretch rounded-2xl border border-[var(--border)] bg-[var(--surface)] hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors min-h-[72px]"
                 style={{ boxShadow: 'var(--shadow)' }}
               >
                 {/* Tappable main area */}

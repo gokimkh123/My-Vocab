@@ -210,10 +210,10 @@ export default function GroupsPage() {
             <button
               key={opt.value}
               onClick={() => setSortBy(opt.value)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+              className={`px-3.5 min-h-[40px] inline-flex items-center text-xs font-semibold rounded-lg transition-colors ${
                 sortBy === opt.value
                   ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/20'
-                  : 'bg-[var(--surface2)] text-[var(--text2)] hover:bg-[var(--border)]'
+                  : 'bg-[var(--surface2)] text-[var(--text2)] hover:bg-[var(--border)] active:bg-[var(--border)]'
               }`}
             >
               {opt.label}
@@ -258,7 +258,7 @@ export default function GroupsPage() {
               <li key={group.id} className="flex items-stretch gap-2">
                 <Link
                   href={`/groups/${group.id}`}
-                  className="flex-1 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md transition-all"
+                  className="flex-1 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md transition-all active:scale-[0.98]"
                   style={{ boxShadow: 'var(--shadow)' }}
                 >
                   <div className={`h-1.5 ${palette.bar}`} />

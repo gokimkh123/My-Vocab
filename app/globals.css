@@ -108,9 +108,6 @@ input[type="range"]::-moz-range-thumb {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-@keyframes score-draw {
-  from { stroke-dashoffset: var(--circ); }
-}
 
 /* 모달 열릴 때 하단 탭바 완전히 숨김 */
 body.modal-open #bottom-tab-bar {
@@ -134,4 +131,14 @@ body.modal-open #bottom-tab-bar {
   .animate-slide-up { animation: slide-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
   .animate-pop      { animation: pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
   .animate-fade-in  { animation: fade-in 0.25s ease both; }
+}
+
+/* 모션 최소화 선호 시: 진입 애니메이션·무한 셔머·부드러운 스크롤 끔 (접근성 + 배터리 절약) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

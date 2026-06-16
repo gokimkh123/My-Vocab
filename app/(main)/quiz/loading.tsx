@@ -1,24 +1,17 @@
 export default function Loading() {
   return (
-    <div>
-      <div className="h-7 w-24 bg-gray-200 rounded-lg animate-pulse mb-6" />
-      <div className="space-y-5 bg-white p-6 rounded-xl border border-gray-200">
-        <div>
-          <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-1" />
-          <div className="h-12 w-full bg-gray-100 rounded-lg animate-pulse" />
-        </div>
-        <div>
-          <div className="h-4 w-12 bg-gray-200 rounded animate-pulse mb-2" />
-          <div className="flex gap-3">
-            <div className="flex-1 h-10 bg-gray-100 rounded-lg animate-pulse" />
-            <div className="flex-1 h-10 bg-gray-100 rounded-lg animate-pulse" />
+    <div className="animate-fade-in">
+      <div className="skeleton h-7 w-24 rounded-xl mb-2" />
+      <div className="skeleton h-4 w-48 rounded-lg mb-6" />
+      <div className="space-y-4">
+        {[1, 2].map(i => (
+          <div key={i} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-4" style={{ boxShadow: 'var(--shadow)' }}>
+            <div className="skeleton h-3 w-20 rounded-md" />
+            <div className="skeleton h-12 w-full rounded-xl" />
+            <div className="skeleton h-12 w-full rounded-xl" />
           </div>
-        </div>
-        <div>
-          <div className="h-4 w-20 bg-gray-200 rounded animate-pulse mb-2" />
-          <div className="h-4 w-full bg-gray-100 rounded-full animate-pulse" />
-        </div>
-        <div className="h-13 w-full bg-blue-200 rounded-xl animate-pulse" />
+        ))}
+        <div className="skeleton h-[54px] w-full rounded-xl" />
       </div>
     </div>
   );

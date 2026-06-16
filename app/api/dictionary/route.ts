@@ -50,10 +50,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
+    // dictionaryapi.dev가 느리거나 응답이 없으면 단어 추가 화면(onBlur 조회)이 멈춘다.
+    // 5초 타임아웃으로 끊고 품사 없이 진행하게 한다.
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
     const res = await fetch(`${DICT_API}/${encodeURIComponent(key)}`, {
+      signal: controller.signal,
       // upstream도 캐시 가능하게 표시. dictionaryapi.dev는 변하지 않는 사전 데이터.
       next: { revalidate: 86400 },
-    });
+    }).finally(() => clearTimeout(timeout));
 
     if (!res.ok) {
       setCached(key, { pos: null });

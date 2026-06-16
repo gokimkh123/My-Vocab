@@ -53,6 +53,7 @@ Supabase SQL Editor에서 아래 쿼리 실행:
 ```sql
 create table groups (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
   name text not null,
   description text,
   created_at timestamptz default now()
@@ -60,16 +61,18 @@ create table groups (
 
 create table words (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
   group_id uuid references groups(id) on delete cascade,
   english text not null,
   korean text not null,
-  part_of_speech text,
+  part_of_speech text[],
   example_sentence text,
   created_at timestamptz default now()
 );
 
 create table quiz_sessions (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
   group_id uuid references groups(id),
   quiz_type text not null,
   total_count int not null,
@@ -80,6 +83,7 @@ create table quiz_sessions (
 
 create table quiz_results (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
   session_id uuid references quiz_sessions(id) on delete cascade,
   word_id uuid references words(id),
   is_correct boolean not null,
@@ -88,7 +92,7 @@ create table quiz_results (
 );
 ```
 
-RLS 정책 설정:
+RLS 정책 설정 (본인 행만 접근):
 
 ```sql
 alter table groups enable row level security;
@@ -96,11 +100,17 @@ alter table words enable row level security;
 alter table quiz_sessions enable row level security;
 alter table quiz_results enable row level security;
 
-create policy "auth users only" on groups for all using (auth.uid() is not null);
-create policy "auth users only" on words for all using (auth.uid() is not null);
-create policy "auth users only" on quiz_sessions for all using (auth.uid() is not null);
-create policy "auth users only" on quiz_results for all using (auth.uid() is not null);
+create policy "own rows" on groups for all
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own rows" on words for all
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own rows" on quiz_sessions for all
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own rows" on quiz_results for all
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
 ```
+
+> 서버 라우트는 `SUPABASE_SERVICE_ROLE_KEY`로 RLS를 우회하고 코드에서 `user_id`로 직접 필터링한다. 위 정책은 키가 유출되더라도 데이터가 격리되도록 하는 방어선이다.
 
 ### 4. 로컬 실행
 

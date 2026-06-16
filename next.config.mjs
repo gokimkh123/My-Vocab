@@ -36,6 +36,10 @@ const nextConfig = {
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // 클릭재킹 방지: 이 앱은 iframe에 넣을 일이 없음
+          { key: 'X-Frame-Options', value: 'DENY' },
+          // 안 쓰는 디바이스 기능 전면 차단 (지문 추적·권한 오남용 표면 축소)
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()' },
         ],
       },
     ];

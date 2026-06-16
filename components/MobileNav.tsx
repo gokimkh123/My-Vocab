@@ -21,16 +21,13 @@ export default function MobileNav({ signOut }: Props) {
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
+    // 키보드 개폐는 visualViewport 'resize'로만 감지한다.
+    // 'scroll'은 페이지 스크롤마다 발화해 배터리만 잡아먹고 키보드 감지엔 불필요 → 제외.
     const handler = () => {
-      // iOS에서 키보드가 올라오면 visualViewport.height가 줄어듦
       setKeyboardOpen(window.innerHeight - vv.height > 150);
     };
     vv.addEventListener('resize', handler);
-    vv.addEventListener('scroll', handler);
-    return () => {
-      vv.removeEventListener('resize', handler);
-      vv.removeEventListener('scroll', handler);
-    };
+    return () => vv.removeEventListener('resize', handler);
   }, []);
 
   function isActive(href: string) {
@@ -108,7 +105,7 @@ export default function MobileNav({ signOut }: Props) {
       {/* Bottom tab bar — 키보드·모달 열리면 숨김 */}
       <nav
         id="bottom-tab-bar"
-        className={`fixed bottom-0 left-0 right-0 z-40 bg-[var(--surface)]/95 backdrop-blur-sm border-t border-[var(--border)] transition-transform duration-200 ease-in-out ${
+        className={`fixed bottom-0 left-0 right-0 z-40 bg-[var(--surface)] border-t border-[var(--border)] transition-transform duration-200 ease-in-out ${
           keyboardOpen ? 'translate-y-full' : 'translate-y-0'
         }`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
@@ -121,7 +118,7 @@ export default function MobileNav({ signOut }: Props) {
               <Link
                 key={href}
                 href={href}
-                className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors"
+                className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors active:bg-[var(--surface2)]"
               >
                 <span className={`w-6 h-6 transition-all duration-200 ${active ? 'text-indigo-500 scale-110' : 'text-[var(--text3)]'}`}>
                   <Icon />

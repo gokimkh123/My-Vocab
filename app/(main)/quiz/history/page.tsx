@@ -128,7 +128,7 @@ export default function QuizHistoryPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSortAsc(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[var(--text2)] bg-[var(--surface2)] rounded-xl border border-[var(--border)] hover:bg-[var(--border)] transition-colors"
+            className="flex items-center gap-1.5 px-3.5 min-h-[40px] text-xs font-semibold text-[var(--text2)] bg-[var(--surface2)] rounded-xl border border-[var(--border)] hover:bg-[var(--border)] active:bg-[var(--border)] transition-colors"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               {sortAsc ? <><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></> : <><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></>}
@@ -137,7 +137,7 @@ export default function QuizHistoryPage() {
           </button>
           <Link
             href="/quiz"
-            className="px-3 py-2 text-xs font-semibold text-indigo-500 bg-indigo-500/10 rounded-xl hover:bg-indigo-500/15 transition-colors"
+            className="inline-flex items-center px-3.5 min-h-[40px] text-xs font-semibold text-indigo-500 bg-indigo-500/10 rounded-xl hover:bg-indigo-500/15 active:bg-indigo-500/20 transition-colors"
           >
             새 퀴즈
           </Link>
