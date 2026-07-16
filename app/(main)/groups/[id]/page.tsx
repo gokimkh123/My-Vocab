@@ -7,6 +7,7 @@ import { mutate } from 'swr';
 import { WordCardSkeleton } from '@/components/Skeleton';
 import { useToast } from '@/components/Toast';
 import { useGroup } from '@/hooks/useGroup';
+import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { useWords } from '@/hooks/useWords';
 import type { Word } from '@/lib/supabase/types';
 
@@ -40,7 +41,7 @@ export default function GroupDetailPage() {
   const [editingWord, setEditingWord] = useState<Word | null>(null);
   const [editForm, setEditForm] = useState({ english: '', korean: '', part_of_speech: [] as string[] });
   const [submitting, setSubmitting] = useState(false);
-  const [sheetBottom, setSheetBottom] = useState(0);
+  const sheetBottom = useKeyboardInset(!!editingWord);
 
   const loading = groupLoading || wordsLoading;
   const error = groupError || wordsError;
@@ -53,23 +54,6 @@ export default function GroupDetailPage() {
     if (editingWord) document.body.classList.add('modal-open');
     else document.body.classList.remove('modal-open');
     return () => document.body.classList.remove('modal-open');
-  }, [editingWord]);
-
-  useEffect(() => {
-    if (!editingWord) { setSheetBottom(0); return; }
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const update = () => {
-      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      setSheetBottom(kb);
-    };
-    vv.addEventListener('resize', update);
-    vv.addEventListener('scroll', update);
-    update();
-    return () => {
-      vv.removeEventListener('resize', update);
-      vv.removeEventListener('scroll', update);
-    };
   }, [editingWord]);
 
   function toggleReveal(wordId: string) {
@@ -101,7 +85,6 @@ export default function GroupDetailPage() {
 
   function closeEditModal() {
     setEditingWord(null);
-    setSheetBottom(0);
   }
 
   async function handleEdit(e: React.FormEvent) {
@@ -241,7 +224,7 @@ export default function GroupDetailPage() {
             return (
               <li
                 key={word.id}
-                className="flex items-stretch rounded-2xl border border-[var(--border)] bg-[var(--surface)] hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors min-h-[72px]"
+                className="list-card flex items-stretch rounded-2xl border border-[var(--border)] bg-[var(--surface)] hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors min-h-[72px]"
                 style={{ boxShadow: 'var(--shadow)' }}
               >
                 {/* Tappable main area */}
@@ -260,7 +243,8 @@ export default function GroupDetailPage() {
                       </span>
                     ))}
                   </div>
-                  <p className={`mt-1.5 text-[var(--text2)] transition-all duration-200 ${revealed ? '' : 'blur-sm'}`}>
+                  {/* transition-all은 모든 속성을 감시한다 — 여기서 변하는 건 filter뿐 */}
+                  <p className={`mt-1.5 text-[var(--text2)] transition-[filter] duration-200 ${revealed ? '' : 'blur-sm'}`}>
                     {word.korean}
                   </p>
                   {word.example_sentence && revealed && (
@@ -302,7 +286,9 @@ export default function GroupDetailPage() {
       {/* Edit modal (bottom sheet) */}
       {editingWord && (
         <div className="fixed inset-0 z-50" onClick={closeEditModal}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+          {/* backdrop-blur는 프레임마다 화면 전체를 읽어 블러 처리한다.
+              2px는 bg-black/40 위에서 눈에 띄지도 않아 GPU만 쓰고 있었다. */}
+          <div className="absolute inset-0 bg-black/40" />
           <div
             className="absolute left-0 right-0 bg-[var(--surface)] rounded-t-3xl shadow-2xl animate-slide-up"
             style={{

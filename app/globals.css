@@ -118,6 +118,19 @@ body.modal-open #bottom-tab-bar {
   .pb-safe  { padding-bottom: env(safe-area-inset-bottom); }
   .pt-safe  { padding-top: env(safe-area-inset-top); }
 
+  /* 화면 밖 단어 카드는 레이아웃·페인트를 통째로 건너뛴다.
+     가려진 뜻마다 filter:blur()가 걸려 카드 하나하나가 GPU 합성 대상이었다
+     → 보이는 몇 장만 그리면 되므로 긴 단어장에서 스크롤 부담과 GPU 메모리가 줄어든다.
+     contain-intrinsic-size의 auto는 한 번 그려본 실제 높이를 기억해 스크롤이 튀지 않게 한다.
+
+     주의: content-visibility는 contain:paint를 함께 걸어 "자식"이 박스 밖으로 나가면 잘린다.
+     그래서 타임라인 점이 -left-6에 있는 퀴즈 기록 카드나, 자식에 box-shadow가 있는
+     단어장 카드에는 쓰면 안 된다. (요소 자신의 box-shadow는 잘리지 않는다) */
+  .list-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 80px;
+  }
+
   .skeleton {
     background: linear-gradient(90deg,
       var(--surface2) 25%,
