@@ -137,7 +137,7 @@ export default function QuizHistoryPage() {
           </button>
           <Link
             href="/quiz"
-            className="inline-flex items-center px-3.5 min-h-[40px] text-xs font-semibold text-indigo-500 bg-indigo-500/10 rounded-xl hover:bg-indigo-500/15 active:bg-indigo-500/20 transition-colors"
+            className="inline-flex items-center px-3.5 min-h-[40px] text-xs font-semibold text-[var(--primary)] bg-indigo-500/10 rounded-xl hover:bg-indigo-500/15 active:bg-indigo-500/20 transition-colors"
           >
             새 퀴즈
           </Link>

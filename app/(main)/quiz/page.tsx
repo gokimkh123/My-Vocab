@@ -116,7 +116,7 @@ export default function QuizSetupPage() {
             <div className="flex items-center justify-between mb-4">
               <p className="text-xs font-bold text-[var(--text3)] uppercase tracking-widest">문제 수</p>
               <div className="flex items-center gap-1">
-                <span className="text-2xl font-bold text-indigo-500">{wordCount}</span>
+                <span className="text-2xl font-bold text-[var(--primary)]">{wordCount}</span>
                 <span className="text-sm text-[var(--text2)]">문제</span>
               </div>
             </div>

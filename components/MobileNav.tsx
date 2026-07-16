@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import ThemeToggle from '@/components/ThemeToggle';
 
 type Props = { signOut: () => Promise<void> };
 
@@ -85,8 +86,9 @@ export default function MobileNav({ signOut }: Props) {
               </button>
             </div>
             <div className="flex-1 p-4">
-              <p className="text-xs font-semibold text-[var(--text3)] uppercase tracking-widest px-2 mb-3">내 단어장</p>
-              <p className="text-sm text-[var(--text2)] px-2">매일 꾸준히 공부해요 ✨</p>
+              <p className="text-xs font-semibold text-[var(--text3)] uppercase tracking-widest px-2 mb-3">화면 테마</p>
+              <ThemeToggle />
+              <p className="text-sm text-[var(--text2)] px-2 mt-6">매일 꾸준히 공부해요 ✨</p>
             </div>
             <div className="p-4 border-t border-[var(--border)]">
               <form action={signOut}>
@@ -120,10 +122,10 @@ export default function MobileNav({ signOut }: Props) {
                 href={href}
                 className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors active:bg-[var(--surface2)]"
               >
-                <span className={`w-6 h-6 transition-all duration-200 ${active ? 'text-indigo-500 scale-110' : 'text-[var(--text3)]'}`}>
+                <span className={`w-6 h-6 transition-transform duration-200 ${active ? 'text-[var(--primary)] scale-110' : 'text-[var(--text3)]'}`}>
                   <Icon />
                 </span>
-                <span className={`text-[10px] font-medium transition-colors ${active ? 'text-indigo-500 font-semibold' : 'text-[var(--text3)]'}`}>
+                <span className={`text-[10px] font-medium transition-colors ${active ? 'text-[var(--primary)] font-semibold' : 'text-[var(--text3)]'}`}>
                   {label}
                 </span>
               </Link>

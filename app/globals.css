@@ -2,36 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bg: #f6f5ff;
-  --surface: #ffffff;
-  --surface2: #eeecff;
-  --border: #e0ddf8;
-  --border2: #ccc9ee;
-  --text: #1a1733;
-  --text2: #6b6890;
-  --text3: #9896b8;
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
+/* 테마는 html[data-theme]으로만 결정한다. OS 설정은 layout.tsx의 인라인 스크립트가
+   읽어서 첫 페인트 전에 data-theme으로 확정하므로, 여기에 미디어 쿼리는 두지 않는다.
+   (미디어 쿼리를 같이 두면 토글로 고른 값과 OS 값이 서로 이기려고 다툰다)
+
+   대비는 흰 배경/검은 배경 기준. 본문은 모두 WCAG AA(4.5:1) 이상이다. */
+:root,
+:root[data-theme='light'] {
+  --bg: #ffffff;
+  --surface: #ffffff;      /* 배경과 같은 흰색 — 카드는 테두리로 구분한다 */
+  --surface2: #f4f4f5;     /* 입력창·칩 바탕 */
+  --border: #e4e4e7;
+  --border2: #d4d4d8;
+  --text: #09090b;         /* 20.1:1 */
+  --text2: #52525b;        /*  7.6:1 */
+  --text3: #71717a;        /*  4.9:1 — 예전 #9896b8은 2.8:1로 AA 미달이었다 */
+  --primary: #4f46e5;      /*  6.4:1 — 흰 배경에선 indigo-500(3.6:1)이 흐렸다 */
+  --primary-hover: #4338ca;
   --primary-light: #eef2ff;
-  --shadow: 0 1px 3px rgba(99,102,241,0.08), 0 4px 12px rgba(99,102,241,0.06);
+  --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.05);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d0c1e;
-    --surface: #17162c;
-    --surface2: #1f1e36;
-    --border: #2c2a47;
-    --border2: #3d3960;
-    --text: #e8e6ff;
-    --text2: #7e7ca0;
-    --text3: #5c5a7c;
-    --primary: #818cf8;
-    --primary-hover: #a5b4fc;
-    --primary-light: #1e1c38;
-    --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
-  }
+/* 순수 검정 배경 — Z Flip 7은 AMOLED라 #000 픽셀은 아예 꺼져서 배터리도 아낀다 */
+:root[data-theme='dark'] {
+  --bg: #000000;
+  --surface: #0c0c0e;      /* 카드만 아주 살짝 띄운다 */
+  --surface2: #18181b;
+  --border: #27272a;
+  --border2: #3f3f46;
+  --text: #fafafa;         /* 19.3:1 */
+  --text2: #a1a1aa;        /*  8.9:1 */
+  --text3: #71717a;        /*  4.9:1 */
+  --primary: #818cf8;      /*  7.4:1 */
+  --primary-hover: #a5b4fc;
+  --primary-light: #1e1b4b;
+  /* 검정 위에선 그림자가 안 보인다 — 카드 구분은 테두리가 맡는다 */
+  --shadow: none;
+}
+
+/* 테마 전환이 화면 전체에서 동시에 일어나 보이도록. 전환 중에만 적용하고
+   (transition-* 클래스가 아니라 여기서) 끝나면 바로 뗀다 → 평소 렌더링엔 영향 없다. */
+:root[data-theme-switching] * {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease !important;
 }
 
 html {

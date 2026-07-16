@@ -136,7 +136,7 @@ export default function AddWordPage() {
       {addedCount > 0 && form.group_id ? (
         <div className="flex items-center justify-between gap-3 mb-5 px-4 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 animate-pop">
           <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">이번에 {addedCount}개 추가됨</span>
-          <Link href={`/groups/${form.group_id}`} className="text-sm font-semibold text-indigo-500 hover:text-indigo-600 shrink-0">
+          <Link href={`/groups/${form.group_id}`} className="text-sm font-semibold text-[var(--primary)] hover:text-[var(--primary-hover)] shrink-0">
             단어장 보기 →
           </Link>
         </div>
@@ -255,7 +255,7 @@ export default function AddWordPage() {
             {groups.length === 0 ? (
               <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text3)] text-sm">
                 <span>단어장이 없습니다</span>
-                <a href="/groups" className="text-indigo-500 font-semibold text-xs">만들기 →</a>
+                <a href="/groups" className="text-[var(--primary)] font-semibold text-xs">만들기 →</a>
               </div>
             ) : (
               <select

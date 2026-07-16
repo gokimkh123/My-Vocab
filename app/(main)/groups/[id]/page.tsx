@@ -155,7 +155,7 @@ export default function GroupDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <p className="text-[var(--text2)] mb-4">{error}</p>
-        <Link href="/groups" className="text-sm text-indigo-500 font-semibold">← 단어장 목록</Link>
+        <Link href="/groups" className="text-sm text-[var(--primary)] font-semibold">← 단어장 목록</Link>
       </div>
     );
   }
@@ -258,7 +258,7 @@ export default function GroupDetailPage() {
                 <div className="flex flex-col border-l border-[var(--border)] shrink-0">
                   <button
                     onClick={() => openEditModal(word)}
-                    className="flex-1 flex items-center justify-center w-12 text-[var(--text3)] hover:text-indigo-400 hover:bg-indigo-500/10 active:bg-indigo-500/15 transition-colors rounded-tr-2xl"
+                    className="flex-1 flex items-center justify-center w-12 text-[var(--text3)] hover:text-[var(--primary)] hover:bg-indigo-500/10 active:bg-indigo-500/15 transition-colors rounded-tr-2xl"
                     aria-label="수정"
                   >
                     <PencilIcon />

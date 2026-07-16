@@ -239,7 +239,7 @@ export default function GroupsPage() {
                 <div className="flex flex-col gap-2 shrink-0">
                   <button
                     onClick={() => openEditGroupModal(group)}
-                    className="flex-1 flex items-center justify-center w-12 rounded-2xl text-[var(--text3)] hover:text-indigo-400 hover:bg-indigo-500/10 active:bg-indigo-500/15 transition-colors border border-[var(--border)] bg-[var(--surface)]"
+                    className="flex-1 flex items-center justify-center w-12 rounded-2xl text-[var(--text3)] hover:text-[var(--primary)] hover:bg-indigo-500/10 active:bg-indigo-500/15 transition-colors border border-[var(--border)] bg-[var(--surface)]"
                     aria-label="수정"
                   >
                     <PencilIcon />

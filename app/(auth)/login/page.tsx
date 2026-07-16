@@ -34,10 +34,6 @@ export default function LoginPage() {
       className="min-h-[100dvh] flex flex-col items-center justify-center px-5 relative overflow-hidden"
       style={{ background: 'var(--bg)' }}
     >
-      {/* Background ambient blobs */}
-      <div className="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-indigo-500/15 blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-violet-500/10 blur-3xl pointer-events-none" />
-
       <div className="relative w-full max-w-sm animate-pop">
         {/* Logo */}
         <div className="text-center mb-8">
