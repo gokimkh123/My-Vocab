@@ -32,6 +32,11 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (!user && !pathname.startsWith('/login')) {
+    // API 요청을 /login으로 리다이렉트하면 fetch가 리다이렉트를 따라가 HTML을 받고 r.json()에서 터진다.
+    // 그래서 로그인이 만료됐을 뿐인데 화면엔 "퀴즈를 찾을 수 없습니다" 같은 엉뚱한 메시지가 떴다.
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 });
+    }
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);

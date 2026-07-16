@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { createClient, getAuthUser } from '@/lib/supabase/server';
+import { NO_STORE } from '@/lib/http';
 import type { ApiResponse, Word } from '@/lib/supabase/types';
 
 export const dynamic = 'force-dynamic';
@@ -37,10 +38,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
-  return NextResponse.json(
-    { data, error: null },
-    { headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' } }
-  );
+  return NextResponse.json({ data, error: null }, { headers: NO_STORE });
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<Word>>> {

@@ -2,12 +2,14 @@ import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 
+// 이 폰트 파일은 2MB다. preload하면 첫 화면에 필요한 JS·API 응답과 대역폭을 다툰다.
+// display:swap이라 글자는 시스템 폰트로 즉시 뜨고, 받아지면 교체된다 → preload할 이유가 없다.
 const pretendard = localFont({
   src: '../node_modules/pretendard/dist/web/variable/woff2/PretendardVariable.woff2',
   display: 'swap',
   weight: '45 920',
   variable: '--font-pretendard',
-  preload: true,
+  preload: false,
   fallback: ['-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Helvetica Neue', 'sans-serif'],
 });
 

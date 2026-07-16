@@ -73,6 +73,8 @@ export default function QuizSessionPage() {
   const wordIdsParam = searchParams.get('word_ids');
   const inputRef = useRef<HTMLInputElement>(null);
   const nextBtnRef = useRef<HTMLButtonElement>(null);
+  // 진행 중인 답안 저장 요청들의 꼬리. 결과 페이지로 넘어가기 전에 이걸 기다린다.
+  const pendingRef = useRef<Promise<unknown>>(Promise.resolve());
 
   const [session, setSession] = useState<QuizSession | null>(null);
   const [words, setWords] = useState<QuizWord[]>([]);
@@ -87,15 +89,21 @@ export default function QuizSessionPage() {
       ? `/api/quiz?session_id=${sessionId}&word_ids=${wordIdsParam}`
       : `/api/quiz?session_id=${sessionId}`;
     fetch(url)
-      .then(r => r.json())
+      .then(r => {
+        // 로그인이 만료되면 미들웨어가 401을 준다. 그냥 두면 "퀴즈를 찾을 수 없습니다"가 떠서
+        // 세션 만료인지 진짜 없는 퀴즈인지 구분이 안 된다.
+        if (r.status === 401) { router.replace('/login'); return null; }
+        return r.json();
+      })
       .then(res => {
-        if (res.data) {
+        if (res?.data) {
           setSession(res.data.session);
           setWords(res.data.words);
         }
         setLoading(false);
-      });
-  }, [sessionId, wordIdsParam]);
+      })
+      .catch(() => setLoading(false));
+  }, [sessionId, wordIdsParam, router]);
 
   // 입력 중엔 입력칸, 정답 확인 후엔 '다음' 버튼에 포커스 → Enter로 바로 다음 문제
   useEffect(() => {
@@ -121,34 +129,52 @@ export default function QuizSessionPage() {
     // 정답 판정은 클라이언트에서 즉시 끝나므로 UI를 먼저 갱신하고 네트워크는 fire-and-forget
     setFeedback(isCorrect ? 'correct' : 'wrong');
 
-    fetch('/api/quiz', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      // keepalive: 페이지 이동/언로드 중에도 요청이 살아남도록
-      keepalive: true,
-      body: JSON.stringify({
-        session_id: sessionId,
-        word_id: currentWord.id,
-        is_correct: isCorrect,
-        user_answer: answer.trim(),
-      }),
-    }).catch(() => {
-      // 단일 사용자 환경에서는 일시적 실패를 무시 (다음 답안 제출 시 다시 누적됨).
-    });
+    // 저장 요청을 앞 요청 뒤에 이어붙인다. 동시에 날리면 서버가 correct_count를 읽고-쓰는 사이
+    // 서로의 증가분을 덮어써 점수가 샌다 (답을 빠르게 연달아 내면 실제로 발생).
+    // 체인이라 화면은 여전히 기다리지 않고 즉시 넘어간다.
+    pendingRef.current = pendingRef.current
+      .then(() => fetch('/api/quiz', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        // keepalive: 페이지 이동/언로드 중에도 요청이 살아남도록
+        keepalive: true,
+        body: JSON.stringify({
+          session_id: sessionId,
+          word_id: currentWord.id,
+          is_correct: isCorrect,
+          user_answer: answer.trim(),
+        }),
+      }))
+      .catch(() => {
+        // 일시적 실패는 무시 — 완료 시 서버가 quiz_results로 점수를 다시 집계한다.
+      });
   }
 
-  function handleNext() {
+  // 결과 페이지는 저장된 답안으로 점수를 매긴다 → 이동 전에 전송이 끝나야 마지막 답이 반영된다.
+  // 네트워크가 죽었을 때 화면이 멈추지 않도록 최대 2초까지만 기다린다.
+  function flushAnswers() {
+    return Promise.race([
+      pendingRef.current,
+      new Promise(resolve => setTimeout(resolve, 2000)),
+    ]);
+  }
+
+  async function handleNext() {
+    // 마지막 문제면 상태를 건드리지 않고 그대로 넘어간다.
+    // 여기서 feedback을 먼저 지우면 flush를 기다리는 동안 입력창이 도로 나타났다 사라진다.
+    if (currentIndex + 1 >= words.length) {
+      await flushAnswers();
+      router.push(`/quiz/result/${sessionId}`);
+      return;
+    }
     setAnswer('');
     setFeedback(null);
-    if (currentIndex + 1 >= words.length) {
-      router.push(`/quiz/result/${sessionId}`);
-    } else {
-      setCurrentIndex(i => i + 1);
-    }
+    setCurrentIndex(i => i + 1);
   }
 
-  function handleQuit() {
+  async function handleQuit() {
     if (confirm('퀴즈를 끝내고 지금까지 결과를 볼까요?')) {
+      await flushAnswers();
       router.push(`/quiz/result/${sessionId}`);
     }
   }

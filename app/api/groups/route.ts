@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { createClient, getAuthUser } from '@/lib/supabase/server';
+import { NO_STORE } from '@/lib/http';
 import type { ApiResponse, Group } from '@/lib/supabase/types';
 
 export const dynamic = 'force-dynamic';
@@ -10,31 +11,23 @@ export async function GET(): Promise<NextResponse<ApiResponse<Group[]>>> {
   if (!user) return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 });
 
   const supabase = createClient();
-  const [{ data: groups, error }, { data: wordRows }] = await Promise.all([
-    supabase
-      .from('groups')
-      .select('id, name, description, created_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('words')
-      .select('group_id')
-      .eq('user_id', user.id),
-  ]);
+  // words(count)는 PostgREST의 중첩 집계 — 개수를 Postgres에서 세서 숫자만 돌려준다.
+  // 예전엔 단어 전체 행을 받아 JS로 셌다. 이 화면이 PWA 시작 화면이라 단어가 늘수록 첫 로딩이 느려졌다.
+  const { data: groups, error } = await supabase
+    .from('groups')
+    .select('id, name, description, created_at, words(count)')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
 
-  const countMap: Record<string, number> = {};
-  for (const w of (wordRows ?? [])) {
-    countMap[w.group_id] = (countMap[w.group_id] ?? 0) + 1;
-  }
+  type GroupRow = Omit<Group, 'word_count'> & { words: { count: number }[] | null };
+  const data = ((groups ?? []) as unknown as GroupRow[]).map(({ words, ...g }) => ({
+    ...g,
+    word_count: words?.[0]?.count ?? 0,
+  }));
 
-  const data = (groups ?? []).map(g => ({ ...g, word_count: countMap[g.id] ?? 0 }));
-
-  return NextResponse.json(
-    { data, error: null },
-    { headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=120' } }
-  );
+  return NextResponse.json({ data, error: null }, { headers: NO_STORE });
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<Group>>> {

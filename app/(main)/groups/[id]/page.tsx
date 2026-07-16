@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { mutate } from 'swr';
 import { WordCardSkeleton } from '@/components/Skeleton';
 import { useToast } from '@/components/Toast';
 import { useGroup } from '@/hooks/useGroup';
@@ -148,6 +149,8 @@ export default function GroupDetailPage() {
         prev => prev ? { ...prev, data: prev.data.filter(w => w.id !== wordId) } : prev,
         { revalidate: false }
       );
+      // 단어장 목록에 표시되는 단어 수도 줄어든다
+      mutate('/api/groups');
     }
     setDeletingId(null);
   }

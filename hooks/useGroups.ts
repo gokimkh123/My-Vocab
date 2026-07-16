@@ -7,7 +7,8 @@ export function useGroups() {
   const { data, error, isLoading, mutate } = useSWR<{ data: Group[]; error?: string }>(
     '/api/groups',
     fetcher,
-    { revalidateOnFocus: false, revalidateIfStale: false, dedupingInterval: 60000 }
+    // 단어를 추가하면 단어 수가 바뀐다 → 재진입 시 재검증해야 최신 개수가 보인다
+    { revalidateOnFocus: false, revalidateIfStale: true, dedupingInterval: 2000 }
   );
 
   return {

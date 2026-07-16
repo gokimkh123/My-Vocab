@@ -56,17 +56,26 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   if (wrongOnly) {
-    const { data: wrongResults } = await supabase
+    // 오답만 받으면 실제 푼 문제 수를 알 수 없어 점수를 검증할 수 없다.
+    // 전체 결과를 받아 여기서 나눈다 — 저장된 correct_count는 뒤늦게 확정되므로 이쪽이 항상 정확하다.
+    const { data: allResults } = await supabase
       .from('quiz_results')
-      .select('id, user_answer, words(id, english, korean)')
-      .eq('session_id', sessionId)
-      .eq('is_correct', false);
+      .select('id, user_answer, is_correct, words(id, english, korean)')
+      .eq('session_id', sessionId);
 
-    type WrongRow = { id: string; user_answer: string | null; words: Word | null };
-    const words = ((wrongResults ?? []) as unknown as WrongRow[])
-      .map(r => r.words)
-      .filter((w): w is Word => w !== null);
-    return NextResponse.json({ data: { session, words, results: wrongResults ?? [] } });
+    type ResultRow = { id: string; user_answer: string | null; is_correct: boolean; words: Word | null };
+    const rows = (allResults ?? []) as unknown as ResultRow[];
+    const wrongRows = rows.filter(r => !r.is_correct);
+    const words = wrongRows.map(r => r.words).filter((w): w is Word => w !== null);
+
+    // 중도 종료한 퀴즈는 낸 문제 수(total_count)보다 푼 문제가 적다 → 실제 푼 수를 분모로
+    const scored = {
+      ...session,
+      correct_count: rows.length - wrongRows.length,
+      total_count: rows.length || session.total_count,
+    };
+
+    return NextResponse.json({ data: { session: scored, words, results: wrongRows } });
   }
 
   if (wordIdsParam) {
@@ -213,13 +222,29 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<ApiRespo
   }
 
   if (complete_session) {
-    // user_id 조건으로 ownership 보장. select 없이 한 번에 처리.
+    // 답안마다 하는 correct_count 증가는 읽고-쓰기라 답안을 빠르게 연달아 내면 서로를 덮어써 점수가 샌다.
+    // 완료 시점에 원본인 quiz_results로 다시 세어 확정한다 → 중간에 샜더라도 최종 점수는 맞는다.
+    const { data: results } = await supabase
+      .from('quiz_results')
+      .select('is_correct')
+      .eq('session_id', session_id);
+
+    const rows = results ?? [];
+    const answered = rows.length;
+
+    // 중도에 끝낸 퀴즈는 낸 문제 수보다 푼 문제가 적다. total_count를 그대로 두면
+    // 히스토리가 total_count - correct_count를 오답 수로 계산해 안 푼 문제까지 틀린 걸로 센다.
     await supabase
       .from('quiz_sessions')
-      .update({ completed_at: new Date().toISOString() })
+      .update({
+        completed_at: new Date().toISOString(),
+        correct_count: rows.filter(r => r.is_correct).length,
+        ...(answered > 0 && { total_count: answered }),
+      })
       .eq('id', session_id)
       .eq('user_id', user.id)
       .is('completed_at', null);
+
     revalidatePath('/quiz/history');
     return NextResponse.json({ data: null, error: null });
   }

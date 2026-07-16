@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { mutate } from 'swr';
 import { useToast } from '@/components/Toast';
 import { useGroups } from '@/hooks/useGroups';
+import type { Word } from '@/lib/supabase/types';
+
+type WordsCache = { data: Word[]; error?: string };
 
 const POS_STYLE: Record<string, string> = {
   noun:      'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
@@ -106,8 +109,15 @@ export default function AddWordPage() {
       return;
     }
 
-    // 단어장 캐시 무효화 → 나중에 단어장 진입 시 최신 목록
-    mutate(`/api/words?group_id=${form.group_id}`);
+    // POST 응답이 생성된 단어를 그대로 준다 → 목록 캐시 맨 앞에 끼워넣으면 재요청 없이 즉시 반영된다.
+    // (/api/words는 created_at 내림차순 정렬이라 새 단어가 맨 앞)
+    mutate<WordsCache>(
+      `/api/words?group_id=${form.group_id}`,
+      prev => (prev ? { ...prev, data: [data.data, ...prev.data] } : prev),
+      { revalidate: false }
+    );
+    // 단어장 목록에 단어 수가 표시된다 → 같이 갱신
+    mutate('/api/groups');
     setAddedCount(c => c + 1);
     toast.show(`'${form.english.trim()}' 추가됨`, 'success');
 

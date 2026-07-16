@@ -17,7 +17,7 @@ export function useQuizHistory() {
   const { data, error, isLoading, mutate } = useSWR<{ data: SessionWithGroup[]; error?: string }>(
     '/api/quiz/history',
     fetcher,
-    { revalidateOnFocus: false, revalidateIfStale: true, dedupingInterval: 10000 }
+    { revalidateOnFocus: false, revalidateIfStale: true, dedupingInterval: 2000 }
   );
 
   return {

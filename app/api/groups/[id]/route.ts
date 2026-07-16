@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { createClient, getAuthUser } from '@/lib/supabase/server';
+import { NO_STORE } from '@/lib/http';
 import type { ApiResponse, Group } from '@/lib/supabase/types';
 
 export const dynamic = 'force-dynamic';
@@ -21,10 +22,7 @@ export async function GET(
     .single();
 
   if (error) return NextResponse.json({ data: null, error: '그룹을 찾을 수 없습니다.' }, { status: 404 });
-  return NextResponse.json(
-    { data, error: null },
-    { headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=120' } }
-  );
+  return NextResponse.json({ data, error: null }, { headers: NO_STORE });
 }
 
 export async function PATCH(

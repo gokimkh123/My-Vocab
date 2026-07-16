@@ -7,7 +7,7 @@ export function useGroup(id: string | null) {
   const { data, error, isLoading, mutate } = useSWR<{ data: Group | null; error?: string }>(
     id ? `/api/groups/${id}` : null,
     fetcher,
-    { revalidateOnFocus: false, revalidateIfStale: false, dedupingInterval: 60000 }
+    { revalidateOnFocus: false, revalidateIfStale: true, dedupingInterval: 2000 }
   );
 
   return {
