@@ -69,16 +69,16 @@ export default function QuizSetupPage() {
                   onClick={() => setGroupId(g.id)}
                   className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl border text-left transition-all ${
                     groupId === g.id
-                      ? 'border-indigo-500 bg-indigo-500/8 ring-2 ring-indigo-500/20'
-                      : 'border-[var(--border)] bg-[var(--surface2)] hover:border-indigo-300 dark:hover:border-indigo-700'
+                      ? 'border-[var(--primary)] bg-[var(--surface2)] ring-2 ring-[var(--focus)]'
+                      : 'border-[var(--border)] bg-[var(--surface2)] hover:border-[var(--border2)]'
                   }`}
                 >
-                  <span className={`font-medium text-sm ${groupId === g.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-[var(--text)]'}`}>
+                  <span className={`font-medium text-sm ${groupId === g.id ? 'text-[var(--primary)]' : 'text-[var(--text)]'}`}>
                     {g.name}
                   </span>
                   {groupId === g.id && (
-                    <span className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <span className="w-5 h-5 rounded-full bg-[var(--primary)] text-[var(--primary-fg)] flex items-center justify-center shrink-0">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12"/>
                       </svg>
                     </span>
@@ -100,8 +100,8 @@ export default function QuizSetupPage() {
                 onClick={() => setQuizType(type)}
                 className={`flex-1 py-3 rounded-xl text-sm font-semibold border transition-all ${
                   quizType === type
-                    ? 'bg-indigo-500 text-white border-indigo-500 shadow-sm shadow-indigo-500/20'
-                    : 'bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:border-indigo-300'
+                    ? 'bg-[var(--primary)] text-[var(--primary-fg)] border-[var(--primary)]'
+                    : 'bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:border-[var(--border2)]'
                 }`}
               >
                 {type === 'en_to_ko' ? '영어 → 한국어' : '한국어 → 영어'}
@@ -151,7 +151,7 @@ export default function QuizSetupPage() {
         <button
           type="submit"
           disabled={loading || maxCount === 0}
-          className="w-full min-h-[54px] bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-xl font-semibold text-base transition-colors disabled:opacity-50 shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2"
+          className="w-full min-h-[54px] bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:bg-[var(--primary-hover)] text-[var(--primary-fg)] rounded-xl font-semibold text-base transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {loading ? (
             <>

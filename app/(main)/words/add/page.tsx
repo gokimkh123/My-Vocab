@@ -14,7 +14,7 @@ import type { Meaning, Word } from '@/lib/supabase/types';
 type WordsCache = { data: Word[]; error?: string };
 
 const INPUT_CLASS =
-  'w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all min-h-[48px]';
+  'w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-[var(--focus)] focus:border-[var(--text3)] transition-all min-h-[48px]';
 const LABEL_CLASS = 'block text-sm font-semibold text-[var(--text2)] mb-1.5';
 
 export default function AddWordPage() {
@@ -233,7 +233,7 @@ export default function AddWordPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full min-h-[52px] bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 shadow-md shadow-indigo-500/20"
+          className="w-full min-h-[52px] bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:bg-[var(--primary-hover)] text-[var(--primary-fg)] rounded-xl font-semibold transition-colors disabled:opacity-50"
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">

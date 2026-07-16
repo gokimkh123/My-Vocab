@@ -16,15 +16,6 @@ const SORT_OPTIONS: { value: SortBy; label: string }[] = [
   { value: 'word_count', label: '단어 많은순' },
 ];
 
-const PALETTES = [
-  { bar: 'bg-indigo-500' },
-  { bar: 'bg-violet-500' },
-  { bar: 'bg-emerald-500' },
-  { bar: 'bg-amber-500' },
-  { bar: 'bg-rose-500' },
-  { bar: 'bg-cyan-500' },
-];
-
 export default function GroupsPage() {
   const toast = useToast();
   const { groups, isLoading: loading, error: groupsError, mutate } = useGroups();
@@ -162,7 +153,7 @@ export default function GroupsPage() {
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 px-4 min-h-[44px] bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm shadow-indigo-500/20"
+          className="flex items-center gap-1.5 px-4 min-h-[44px] bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:bg-[var(--primary-hover)] text-[var(--primary-fg)] text-sm font-semibold rounded-xl transition-colors"
         >
           <span className="text-lg leading-none">+</span>
           <span>새 그룹</span>
@@ -178,7 +169,7 @@ export default function GroupsPage() {
               onClick={() => setSortBy(opt.value)}
               className={`px-3.5 min-h-[40px] inline-flex items-center text-xs font-semibold rounded-lg transition-colors ${
                 sortBy === opt.value
-                  ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/20'
+                  ? 'bg-[var(--primary)] text-[var(--primary-fg)]'
                   : 'bg-[var(--surface2)] text-[var(--text2)] hover:bg-[var(--border)] active:bg-[var(--border)]'
               }`}
             >
@@ -208,7 +199,7 @@ export default function GroupsPage() {
           <p className="text-sm text-[var(--text2)] mb-6">첫 번째 단어장을 만들어 보세요</p>
           <button
             onClick={() => setShowModal(true)}
-            className="px-5 py-2.5 bg-indigo-500 text-white text-sm font-semibold rounded-xl hover:bg-indigo-600 transition-colors"
+            className="px-5 py-2.5 bg-[var(--primary)] text-[var(--primary-fg)] text-sm font-semibold rounded-xl hover:bg-[var(--primary-hover)] transition-colors"
           >
             단어장 만들기
           </button>
@@ -218,16 +209,14 @@ export default function GroupsPage() {
       {/* Groups list */}
       {!loading && groups.length > 0 && (
         <ul className="space-y-3 animate-slide-up">
-          {sortedGroups.map((group, i) => {
-            const palette = PALETTES[i % PALETTES.length];
+          {sortedGroups.map(group => {
             return (
               <li key={group.id} className="flex items-stretch gap-2">
                 <Link
                   href={`/groups/${group.id}`}
-                  className="flex-1 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md transition-all active:scale-[0.98]"
+                  className="flex-1 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border2)] transition-colors active:scale-[0.98]"
                   style={{ boxShadow: 'var(--shadow)' }}
                 >
-                  <div className={`h-1.5 ${palette.bar}`} />
                   <div className="px-5 py-4">
                     <p className="font-semibold text-[var(--text)]">{group.name}</p>
                     {group.description && (
@@ -239,7 +228,7 @@ export default function GroupsPage() {
                 <div className="flex flex-col gap-2 shrink-0">
                   <button
                     onClick={() => openEditGroupModal(group)}
-                    className="flex-1 flex items-center justify-center w-12 rounded-2xl text-[var(--text3)] hover:text-[var(--primary)] hover:bg-indigo-500/10 active:bg-indigo-500/15 transition-colors border border-[var(--border)] bg-[var(--surface)]"
+                    className="flex-1 flex items-center justify-center w-12 rounded-2xl text-[var(--text3)] hover:text-[var(--primary)] hover:bg-[var(--surface2)] active:bg-[var(--surface2)] transition-colors border border-[var(--border)] bg-[var(--surface)]"
                     aria-label="수정"
                   >
                     <PencilIcon />
@@ -291,7 +280,7 @@ export default function GroupsPage() {
                       onChange={e => setEditGroupName(e.target.value)}
                       required
                       autoFocus
-                      className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all min-h-[48px]"
+                      className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-[var(--focus)] focus:border-[var(--text3)] transition-all min-h-[48px]"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -301,7 +290,7 @@ export default function GroupsPage() {
                       value={editGroupDesc}
                       onChange={e => setEditGroupDesc(e.target.value)}
                       placeholder="어떤 단어들을 모을 건가요?"
-                      className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all min-h-[48px]"
+                      className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-[var(--focus)] focus:border-[var(--text3)] transition-all min-h-[48px]"
                     />
                   </div>
                 </div>
@@ -316,7 +305,7 @@ export default function GroupsPage() {
                   <button
                     type="submit"
                     disabled={editSubmitting}
-                    className="flex-1 min-h-[50px] text-sm font-semibold text-white bg-indigo-500 rounded-xl hover:bg-indigo-600 disabled:opacity-50 transition-colors shadow-sm shadow-indigo-500/20"
+                    className="flex-1 min-h-[50px] text-sm font-semibold text-[var(--primary-fg)] bg-[var(--primary)] rounded-xl hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors"
                   >
                     {editSubmitting ? '수정 중...' : '수정 완료'}
                   </button>
@@ -356,7 +345,7 @@ export default function GroupsPage() {
                       required
                       autoFocus
                       placeholder="예: 토익 단어장"
-                      className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all min-h-[48px]"
+                      className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-[var(--focus)] focus:border-[var(--text3)] transition-all min-h-[48px]"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -366,7 +355,7 @@ export default function GroupsPage() {
                       value={description}
                       onChange={e => setDescription(e.target.value)}
                       placeholder="어떤 단어들을 모을 건가요?"
-                      className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all min-h-[48px]"
+                      className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-[var(--focus)] focus:border-[var(--text3)] transition-all min-h-[48px]"
                     />
                   </div>
                 </div>
@@ -381,7 +370,7 @@ export default function GroupsPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="flex-1 min-h-[50px] text-sm font-semibold text-white bg-indigo-500 rounded-xl hover:bg-indigo-600 disabled:opacity-50 transition-colors shadow-sm shadow-indigo-500/20"
+                    className="flex-1 min-h-[50px] text-sm font-semibold text-[var(--primary-fg)] bg-[var(--primary)] rounded-xl hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors"
                   >
                     {submitting ? '만드는 중...' : '만들기'}
                   </button>

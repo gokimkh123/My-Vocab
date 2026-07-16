@@ -48,8 +48,9 @@ export default function MobileNav({ signOut }: Props) {
       >
         <div className="h-14 flex items-center justify-between px-4 max-w-2xl mx-auto">
           <Link href="/groups" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-indigo-500 flex items-center justify-center shadow-sm shadow-indigo-500/30">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            {/* stroke를 currentColor로 — 다크 모드에선 이 배경이 흰색이라 흰 선은 안 보인다 */}
+            <div className="w-8 h-8 rounded-xl bg-[var(--primary)] text-[var(--primary-fg)] flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
                 <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
               </svg>

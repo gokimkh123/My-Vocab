@@ -162,7 +162,7 @@ export default function GroupDetailPage() {
         </div>
         <Link
           href={`/words/add?group_id=${id}`}
-          className="flex items-center gap-1.5 px-4 min-h-[44px] bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm shadow-indigo-500/20 shrink-0"
+          className="flex items-center gap-1.5 px-4 min-h-[44px] bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--primary-fg)] text-sm font-semibold rounded-xl transition-colors shrink-0"
         >
           <span className="text-lg leading-none">+</span>
           <span>단어 추가</span>
@@ -186,7 +186,7 @@ export default function GroupDetailPage() {
           <p className="text-sm text-[var(--text2)] mb-6">첫 번째 단어를 추가해 보세요</p>
           <Link
             href="/words/add"
-            className="px-5 py-2.5 bg-indigo-500 text-white text-sm font-semibold rounded-xl hover:bg-indigo-600 transition-colors"
+            className="px-5 py-2.5 bg-[var(--primary)] text-[var(--primary-fg)] text-sm font-semibold rounded-xl hover:bg-[var(--primary-hover)] transition-colors"
           >
             단어 추가하기
           </Link>
@@ -206,7 +206,7 @@ export default function GroupDetailPage() {
             return (
               <li
                 key={word.id}
-                className="list-card flex items-stretch rounded-2xl border border-[var(--border)] bg-[var(--surface)] hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors min-h-[72px]"
+                className="list-card flex items-stretch rounded-2xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border2)] transition-colors min-h-[72px]"
                 style={{ boxShadow: 'var(--shadow)' }}
               >
                 {/* Tappable main area */}
@@ -243,7 +243,7 @@ export default function GroupDetailPage() {
                 <div className="flex flex-col border-l border-[var(--border)] shrink-0">
                   <button
                     onClick={() => openEditModal(word)}
-                    className="flex-1 flex items-center justify-center w-12 text-[var(--text3)] hover:text-[var(--primary)] hover:bg-indigo-500/10 active:bg-indigo-500/15 transition-colors rounded-tr-2xl"
+                    className="flex-1 flex items-center justify-center w-12 text-[var(--text3)] hover:text-[var(--primary)] hover:bg-[var(--surface2)] active:bg-[var(--surface2)] transition-colors rounded-tr-2xl"
                     aria-label="수정"
                   >
                     <PencilIcon />
@@ -296,7 +296,7 @@ export default function GroupDetailPage() {
                       value={editEnglish}
                       onChange={e => setEditEnglish(e.target.value)}
                       required
-                      className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all min-h-[48px]"
+                      className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--focus)] focus:border-[var(--text3)] transition-all min-h-[48px]"
                     />
                   </div>
                   <MeaningEditor
@@ -316,7 +316,7 @@ export default function GroupDetailPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="flex-1 min-h-[50px] text-sm font-semibold text-white bg-indigo-500 rounded-xl hover:bg-indigo-600 disabled:opacity-50 transition-colors shadow-sm shadow-indigo-500/20"
+                    className="flex-1 min-h-[50px] text-sm font-semibold text-[var(--primary-fg)] bg-[var(--primary)] rounded-xl hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors"
                   >
                     {submitting ? '수정 중...' : '수정 완료'}
                   </button>

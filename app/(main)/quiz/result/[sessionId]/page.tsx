@@ -163,7 +163,7 @@ export default function QuizResultPage() {
           <button
             onClick={handleRetry}
             disabled={retrying}
-            className="w-full min-h-[52px] bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-md shadow-red-500/20"
+            className="w-full min-h-[52px] bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {retrying ? (
               <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -180,7 +180,7 @@ export default function QuizResultPage() {
         <div className="flex gap-3">
           <Link
             href="/quiz"
-            className="flex-1 min-h-[52px] flex items-center justify-center bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-semibold transition-colors shadow-md shadow-indigo-500/20"
+            className="flex-1 min-h-[52px] flex items-center justify-center bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--primary-fg)] rounded-xl font-semibold transition-colors"
           >
             새 퀴즈
           </Link>

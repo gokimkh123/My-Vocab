@@ -137,7 +137,7 @@ export default function QuizHistoryPage() {
           </button>
           <Link
             href="/quiz"
-            className="inline-flex items-center px-3.5 min-h-[40px] text-xs font-semibold text-[var(--primary)] bg-indigo-500/10 rounded-xl hover:bg-indigo-500/15 active:bg-indigo-500/20 transition-colors"
+            className="inline-flex items-center px-3.5 min-h-[40px] text-xs font-semibold text-[var(--primary)] bg-[var(--surface2)] rounded-xl hover:bg-[var(--surface2)] active:bg-[var(--border)] transition-colors"
           >
             새 퀴즈
           </Link>
@@ -163,7 +163,7 @@ export default function QuizHistoryPage() {
           </div>
           <p className="font-semibold text-[var(--text)] mb-1">아직 퀴즈 기록이 없어요</p>
           <p className="text-sm text-[var(--text2)] mb-6">퀴즈를 풀고 나면 여기에 기록이 남아요</p>
-          <Link href="/quiz" className="px-5 py-2.5 bg-indigo-500 text-white text-sm font-semibold rounded-xl hover:bg-indigo-600 transition-colors">
+          <Link href="/quiz" className="px-5 py-2.5 bg-[var(--primary)] text-[var(--primary-fg)] text-sm font-semibold rounded-xl hover:bg-[var(--primary-hover)] transition-colors">
             퀴즈 시작하기
           </Link>
         </div>

@@ -5,7 +5,7 @@ import { POS_OPTIONS, POS_STYLE, emptyMeaning, tagStyle } from '@/lib/meanings';
 import type { Meaning } from '@/lib/supabase/types';
 
 const INPUT_CLASS =
-  'w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all min-h-[48px]';
+  'w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-[var(--focus)] focus:border-[var(--text3)] transition-all min-h-[48px]';
 
 type Props = {
   meanings: Meaning[];

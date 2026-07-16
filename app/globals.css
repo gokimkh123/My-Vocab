@@ -17,9 +17,12 @@
   --text: #09090b;         /* 20.1:1 */
   --text2: #52525b;        /*  7.6:1 */
   --text3: #71717a;        /*  4.9:1 — 예전 #9896b8은 2.8:1로 AA 미달이었다 */
-  --primary: #4f46e5;      /*  6.4:1 — 흰 배경에선 indigo-500(3.6:1)이 흐렸다 */
-  --primary-hover: #4338ca;
-  --primary-light: #eef2ff;
+  /* 강조색도 무채색. 배경이 순백/순검이라 유채색 강조가 겉돌았다.
+     품사·태그 칩만 색을 쓴다 — 거긴 색이 곧 의미라서. */
+  --primary: #09090b;      /* 채움 버튼 배경 + 강조 글자 */
+  --primary-fg: #ffffff;   /* 채움 버튼 위 글자 (20.1:1) */
+  --primary-hover: #27272a;
+  --focus: rgba(9, 9, 11, 0.15);
   --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.05);
 }
 
@@ -33,9 +36,11 @@
   --text: #fafafa;         /* 19.3:1 */
   --text2: #a1a1aa;        /*  8.9:1 */
   --text3: #71717a;        /*  4.9:1 */
-  --primary: #818cf8;      /*  7.4:1 */
-  --primary-hover: #a5b4fc;
-  --primary-light: #1e1b4b;
+  /* 라이트와 반전된다 — 검정 배경에선 흰 버튼이 채움 버튼이 된다 */
+  --primary: #fafafa;
+  --primary-fg: #09090b;   /* 19.3:1 */
+  --primary-hover: #d4d4d8;
+  --focus: rgba(250, 250, 250, 0.2);
   /* 검정 위에선 그림자가 안 보인다 — 카드 구분은 테두리가 맡는다 */
   --shadow: none;
 }

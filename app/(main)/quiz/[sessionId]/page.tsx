@@ -228,7 +228,7 @@ export default function QuizSessionPage() {
         </div>
         <div className="h-1.5 bg-[var(--surface2)] rounded-full overflow-hidden">
           <div
-            className="h-full bg-indigo-500 rounded-full transition-all duration-500 ease-out"
+            className="h-full bg-[var(--primary)] rounded-full transition-all duration-500 ease-out"
             style={{ width: `${progress * 100}%` }}
           />
         </div>
@@ -285,7 +285,7 @@ export default function QuizSessionPage() {
           <button
             ref={nextBtnRef}
             onClick={handleNext}
-            className="w-full min-h-[52px] bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-xl font-semibold transition-colors shadow-md shadow-indigo-500/20"
+            className="w-full min-h-[52px] bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:bg-[var(--primary-hover)] text-[var(--primary-fg)] rounded-xl font-semibold transition-colors"
           >
             {currentIndex + 1 >= items.length ? '결과 보기 →' : '다음 →'}
           </button>
@@ -301,12 +301,12 @@ export default function QuizSessionPage() {
             autoCorrect="off"
             spellCheck={false}
             placeholder="정답을 입력하세요"
-            className="w-full px-4 py-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 text-center text-lg font-medium transition-all min-h-[56px]"
+            className="w-full px-4 py-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-[var(--focus)] focus:border-[var(--text3)] text-center text-lg font-medium transition-all min-h-[56px]"
           />
           <button
             type="submit"
             disabled={!answer.trim()}
-            className="w-full min-h-[52px] bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-xl font-semibold transition-colors disabled:opacity-40 shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2"
+            className="w-full min-h-[52px] bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:bg-[var(--primary-hover)] text-[var(--primary-fg)] rounded-xl font-semibold transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
           >
             확인
           </button>
