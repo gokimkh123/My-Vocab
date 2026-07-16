@@ -14,8 +14,9 @@ function shuffle<T>(arr: T[]): T[] {
   return result;
 }
 
-// 퀴즈 화면이 실제로 쓰는 컬럼만 — example_sentence(긴 텍스트)/created_at/group_id 제외해 전송량 절감
-const QUIZ_COLS = 'id, english, korean, part_of_speech';
+// 퀴즈 화면이 실제로 쓰는 컬럼만 — created_at/group_id/example_sentence 제외해 전송량 절감.
+// meanings로 문제를 내고, korean은 파생값이라 결과 화면에서 한 줄 요약으로 쓴다.
+const QUIZ_COLS = 'id, english, meanings, korean, part_of_speech';
 
 // arr에서 무작위 k개 선택. 부분 Fisher-Yates라 전체를 섞지 않음 (난수·스왑 O(k), 전체 셔플 O(n) 회피).
 function sample<T>(arr: T[], k: number): T[] {

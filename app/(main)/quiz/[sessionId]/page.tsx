@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import type { Word, QuizSession } from '@/lib/supabase/types';
+import { POS_LABEL, POS_STYLE, tagStyle } from '@/lib/meanings';
+import type { Meaning, Word, QuizSession } from '@/lib/supabase/types';
 
-type QuizWord = Word & { answered?: boolean; correct?: boolean };
+/** 한 문제 = 단어 + 그중 물어볼 뜻 하나 */
+type QuizItem = { word: Word; meaning: Meaning };
 
 // 편집거리가 max 이하인지만 판정 (정답 체크엔 dist<=max 여부만 필요).
 // 길이차 > max면 즉시 false (편집거리 ≥ 길이차, 수학적 사실). 메모리는 O(min(m,n)) 롤링 1D 배열.
@@ -56,15 +58,12 @@ function checkAnswer(userAnswer: string, correct: string): boolean {
   return buildCandidates(correct).some(c => isWithinEdits(normUser, c, allowedEdits(c.length)));
 }
 
-const POS_STYLE: Record<string, string> = {
-  noun:      'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-  verb:      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-  adjective: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-  adverb:    'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
-};
-const POS_LABEL: Record<string, string> = {
-  noun: '명사', verb: '동사', adjective: '형용사', adverb: '부사',
-};
+// 뜻이 여러 개인 단어는 그중 하나만 물어본다. 어느 걸 물었는지는 칩(품사·태그)으로 보여주므로
+// 답이 하나로 정해진다 — 'run'에 명사/동사 뜻이 다 있어도 [동사]를 띄우면 답은 '달리다'뿐이다.
+function pickMeaning(w: Word): Meaning {
+  const list = w.meanings?.length ? w.meanings : [{ pos: null, tags: [], korean: w.korean }];
+  return list[Math.floor(Math.random() * list.length)];
+}
 
 export default function QuizSessionPage() {
   const router = useRouter();
@@ -77,7 +76,7 @@ export default function QuizSessionPage() {
   const pendingRef = useRef<Promise<unknown>>(Promise.resolve());
 
   const [session, setSession] = useState<QuizSession | null>(null);
-  const [words, setWords] = useState<QuizWord[]>([]);
+  const [items, setItems] = useState<QuizItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answer, setAnswer] = useState('');
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
@@ -98,7 +97,8 @@ export default function QuizSessionPage() {
       .then(res => {
         if (res?.data) {
           setSession(res.data.session);
-          setWords(res.data.words);
+          // 물어볼 뜻은 여기서 한 번만 고른다. 렌더할 때마다 고르면 문제가 바뀌어 버린다.
+          setItems((res.data.words as Word[]).map(w => ({ word: w, meaning: pickMeaning(w) })));
         }
         setLoading(false);
       })
@@ -115,13 +115,14 @@ export default function QuizSessionPage() {
     return () => clearTimeout(t);
   }, [loading, currentIndex, feedback]);
 
-  const currentWord = words[currentIndex];
+  const current = items[currentIndex];
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!currentWord || !session) return;
+    if (!current || !session) return;
 
-    const correctAnswer = session.quiz_type === 'en_to_ko' ? currentWord.korean : currentWord.english;
+    const correctAnswer =
+      session.quiz_type === 'en_to_ko' ? current.meaning.korean : current.word.english;
     const isCorrect = checkAnswer(answer, correctAnswer);
     // 오타 허용으로 맞은 경우(정확히 일치하진 않음)엔 정확한 철자를 보여주기 위해 기록
     setExactMatch(buildCandidates(correctAnswer).includes(normalize(answer)));
@@ -140,7 +141,7 @@ export default function QuizSessionPage() {
         keepalive: true,
         body: JSON.stringify({
           session_id: sessionId,
-          word_id: currentWord.id,
+          word_id: current.word.id,
           is_correct: isCorrect,
           user_answer: answer.trim(),
         }),
@@ -162,7 +163,7 @@ export default function QuizSessionPage() {
   async function handleNext() {
     // 마지막 문제면 상태를 건드리지 않고 그대로 넘어간다.
     // 여기서 feedback을 먼저 지우면 flush를 기다리는 동안 입력창이 도로 나타났다 사라진다.
-    if (currentIndex + 1 >= words.length) {
+    if (currentIndex + 1 >= items.length) {
       await flushAnswers();
       router.push(`/quiz/result/${sessionId}`);
       return;
@@ -189,7 +190,7 @@ export default function QuizSessionPage() {
     );
   }
 
-  if (!session || !currentWord) {
+  if (!session || !current) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <p className="text-[var(--text2)]">퀴즈를 찾을 수 없습니다.</p>
@@ -197,17 +198,22 @@ export default function QuizSessionPage() {
     );
   }
 
-  const questionText = session.quiz_type === 'en_to_ko' ? currentWord.english : currentWord.korean;
-  const correctAnswer = session.quiz_type === 'en_to_ko' ? currentWord.korean : currentWord.english;
-  const progress = (currentIndex + 1) / words.length;
-  const posList = currentWord.part_of_speech?.length ? currentWord.part_of_speech : null;
+  const { word, meaning } = current;
+  const questionText = session.quiz_type === 'en_to_ko' ? word.english : meaning.korean;
+  const correctAnswer = session.quiz_type === 'en_to_ko' ? meaning.korean : word.english;
+  const progress = (currentIndex + 1) / items.length;
+  // 칩은 어느 뜻을 묻는지 알려주는 단서다 — 이게 있어야 답이 하나로 정해진다
+  const chips = [
+    ...(meaning.pos ? [{ key: meaning.pos, label: POS_LABEL[meaning.pos] ?? meaning.pos, style: POS_STYLE[meaning.pos] ?? '' }] : []),
+    ...(meaning.tags ?? []).map(t => ({ key: t, label: t, style: tagStyle(t) })),
+  ];
 
   return (
     <div className="animate-fade-in flex flex-col gap-5">
       {/* Progress bar */}
       <div>
         <div className="flex items-center justify-between text-sm text-[var(--text2)] mb-2">
-          <span className="font-semibold text-[var(--text)]">{currentIndex + 1} <span className="text-[var(--text3)] font-normal">/ {words.length}</span></span>
+          <span className="font-semibold text-[var(--text)]">{currentIndex + 1} <span className="text-[var(--text3)] font-normal">/ {items.length}</span></span>
           <div className="flex items-center gap-2">
             <span className="text-xs px-2 py-1 rounded-full bg-[var(--surface2)] font-medium">
               {session.quiz_type === 'en_to_ko' ? '영→한' : '한→영'}
@@ -235,11 +241,11 @@ export default function QuizSessionPage() {
         style={{ boxShadow: 'var(--shadow)' }}
       >
         <p className="text-3xl font-bold text-[var(--text)] leading-tight break-words">{questionText}</p>
-        {posList && (
+        {chips.length > 0 && (
           <div className="flex gap-1.5 justify-center mt-3 flex-wrap">
-            {posList.map(pos => (
-              <span key={pos} className={`text-xs font-semibold px-2.5 py-1 rounded-full ${POS_STYLE[pos] ?? ''}`}>
-                {POS_LABEL[pos] ?? pos}
+            {chips.map(c => (
+              <span key={c.key} className={`text-xs font-semibold px-2.5 py-1 rounded-full ${c.style}`}>
+                {c.label}
               </span>
             ))}
           </div>
@@ -281,7 +287,7 @@ export default function QuizSessionPage() {
             onClick={handleNext}
             className="w-full min-h-[52px] bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-xl font-semibold transition-colors shadow-md shadow-indigo-500/20"
           >
-            {currentIndex + 1 >= words.length ? '결과 보기 →' : '다음 →'}
+            {currentIndex + 1 >= items.length ? '결과 보기 →' : '다음 →'}
           </button>
         </div>
       ) : (

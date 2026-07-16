@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { createClient, getAuthUser } from '@/lib/supabase/server';
 import { NO_STORE } from '@/lib/http';
-import type { ApiResponse, Word } from '@/lib/supabase/types';
+import { cleanMeanings, deriveKorean, derivePos } from '@/lib/meanings';
+import type { ApiResponse, Meaning, Word } from '@/lib/supabase/types';
 
 export const dynamic = 'force-dynamic';
+
+// example_sentence는 더 이상 쓰지 않는다 (화면에서 제거). 컬럼과 기존 데이터는 남아 있다.
+const WORD_COLS = 'id, group_id, english, meanings, korean, part_of_speech, created_at';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const user = await getAuthUser();
@@ -32,7 +36,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const { data, error } = await supabase
     .from('words')
-    .select('id, group_id, english, korean, part_of_speech, example_sentence, created_at')
+    .select(WORD_COLS)
     .eq('group_id', groupId)
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
@@ -47,15 +51,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
   const supabase = createClient();
   const body = await request.json();
-  const { english, korean, part_of_speech, example_sentence, group_id } = body as {
+  const { english, meanings, group_id } = body as {
     english: string;
-    korean: string;
-    part_of_speech?: string[];
-    example_sentence?: string;
+    meanings: Meaning[];
     group_id: string;
   };
 
-  if (!english?.trim() || !korean?.trim() || !group_id) {
+  const clean = cleanMeanings(meanings ?? []);
+  if (!english?.trim() || clean.length === 0 || !group_id) {
     return NextResponse.json(
       { data: null, error: '영어 단어, 한글 뜻, 그룹은 필수입니다.' },
       { status: 400 }
@@ -81,13 +84,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     .from('words')
     .insert({
       english: english.trim(),
-      korean: korean.trim(),
-      part_of_speech: part_of_speech?.length ? part_of_speech : null,
-      example_sentence: example_sentence?.trim() || null,
+      meanings: clean,
+      // korean·part_of_speech는 meanings에서 파생 — 스키마 not null과 결과/기록 화면 때문에 유지
+      korean: deriveKorean(clean),
+      part_of_speech: derivePos(clean),
       group_id,
       user_id: user.id,
     })
-    .select()
+    .select(WORD_COLS)
     .single();
 
   if (error) return NextResponse.json({ data: null, error: '단어 추가에 실패했습니다.' }, { status: 500 });
@@ -103,14 +107,14 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<ApiRespo
 
   const supabase = createClient();
   const body = await request.json();
-  const { id, english, korean, part_of_speech } = body as {
+  const { id, english, meanings } = body as {
     id: string;
     english: string;
-    korean: string;
-    part_of_speech?: string[] | null;
+    meanings: Meaning[];
   };
 
-  if (!id || !english?.trim() || !korean?.trim()) {
+  const clean = cleanMeanings(meanings ?? []);
+  if (!id || !english?.trim() || clean.length === 0) {
     return NextResponse.json({ data: null, error: '필수 항목을 모두 입력해주세요.' }, { status: 400 });
   }
 
@@ -118,12 +122,13 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<ApiRespo
     .from('words')
     .update({
       english: english.trim(),
-      korean: korean.trim(),
-      part_of_speech: part_of_speech?.length ? part_of_speech : null,
+      meanings: clean,
+      korean: deriveKorean(clean),
+      part_of_speech: derivePos(clean),
     })
     .eq('id', id)
     .eq('user_id', user.id)
-    .select()
+    .select(WORD_COLS)
     .single();
 
   if (error) return NextResponse.json({ data: null, error: '수정에 실패했습니다.' }, { status: 500 });

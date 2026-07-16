@@ -1,33 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { mutate } from 'swr';
+import MeaningEditor from '@/components/MeaningEditor';
 import { WordCardSkeleton } from '@/components/Skeleton';
 import { useToast } from '@/components/Toast';
 import { useGroup } from '@/hooks/useGroup';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { useWords } from '@/hooks/useWords';
-import type { Word } from '@/lib/supabase/types';
-
-const POS_STYLE: Record<string, string> = {
-  noun:      'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-  verb:      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-  adjective: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-  adverb:    'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
-};
-
-const POS_LABEL: Record<string, string> = {
-  noun: '명사', verb: '동사', adjective: '형용사', adverb: '부사',
-};
-
-const POS_OPTIONS = [
-  { value: 'noun', label: '명사' },
-  { value: 'verb', label: '동사' },
-  { value: 'adjective', label: '형용사' },
-  { value: 'adverb', label: '부사' },
-];
+import { POS_LABEL, POS_STYLE, emptyMeaning, tagStyle } from '@/lib/meanings';
+import type { Meaning, Word } from '@/lib/supabase/types';
 
 export default function GroupDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -39,9 +23,16 @@ export default function GroupDetailPage() {
 
   // Edit modal
   const [editingWord, setEditingWord] = useState<Word | null>(null);
-  const [editForm, setEditForm] = useState({ english: '', korean: '', part_of_speech: [] as string[] });
+  const [editEnglish, setEditEnglish] = useState('');
+  const [editMeanings, setEditMeanings] = useState<Meaning[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const sheetBottom = useKeyboardInset(!!editingWord);
+
+  const tagSuggestions = useMemo(() => {
+    const seen = new Set<string>();
+    for (const w of words) for (const m of w.meanings ?? []) for (const t of m.tags ?? []) seen.add(t);
+    return Array.from(seen);
+  }, [words]);
 
   const loading = groupLoading || wordsLoading;
   const error = groupError || wordsError;
@@ -67,20 +58,9 @@ export default function GroupDetailPage() {
 
   function openEditModal(word: Word) {
     setEditingWord(word);
-    setEditForm({
-      english: word.english,
-      korean: word.korean,
-      part_of_speech: word.part_of_speech ?? [],
-    });
-  }
-
-  function togglePos(pos: string) {
-    setEditForm(f => ({
-      ...f,
-      part_of_speech: f.part_of_speech.includes(pos)
-        ? f.part_of_speech.filter(p => p !== pos)
-        : [...f.part_of_speech, pos],
-    }));
+    setEditEnglish(word.english);
+    // meanings 이전 전에 저장된 단어는 이 값이 비어 있을 수 있다 → 빈 칸 하나로 시작
+    setEditMeanings(word.meanings?.length ? word.meanings : [emptyMeaning()]);
   }
 
   function closeEditModal() {
@@ -97,9 +77,8 @@ export default function GroupDetailPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: editingWord.id,
-        english: editForm.english,
-        korean: editForm.korean,
-        part_of_speech: editForm.part_of_speech.length ? editForm.part_of_speech : null,
+        english: editEnglish,
+        meanings: editMeanings,
       }),
     });
     const data = await res.json();
@@ -219,7 +198,10 @@ export default function GroupDetailPage() {
         <ul className="space-y-3 animate-slide-up">
           {words.map(word => {
             const revealed = revealedIds.has(word.id);
-            const posList = word.part_of_speech?.length ? word.part_of_speech : null;
+            // meanings 이전 전 단어는 비어 있을 수 있다 → korean 한 줄로 대신 보여준다
+            const rows: Meaning[] = word.meanings?.length
+              ? word.meanings
+              : [{ pos: null, tags: [], korean: word.korean }];
 
             return (
               <li
@@ -232,26 +214,29 @@ export default function GroupDetailPage() {
                   className="flex-1 p-4 cursor-pointer min-w-0 active:bg-[var(--surface2)] rounded-l-2xl transition-colors select-none"
                   onClick={() => toggleReveal(word.id)}
                 >
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-xl font-bold text-[var(--text)]">{word.english}</p>
-                    {posList && posList.map(pos => (
-                      <span
-                        key={pos}
-                        className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${POS_STYLE[pos] ?? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}
-                      >
-                        {POS_LABEL[pos] ?? pos}
-                      </span>
+                  <p className="text-xl font-bold text-[var(--text)]">{word.english}</p>
+
+                  {/* 칩(품사·태그)은 가리지 않는다 — 뜻을 떠올리는 단서로 쓰라고 남겨둔다 */}
+                  <div className="mt-2 space-y-1.5">
+                    {rows.map((m, i) => (
+                      <div key={i} className="flex items-center gap-1.5 flex-wrap">
+                        {m.pos && (
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${POS_STYLE[m.pos] ?? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>
+                            {POS_LABEL[m.pos] ?? m.pos}
+                          </span>
+                        )}
+                        {(m.tags ?? []).map(t => (
+                          <span key={t} className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${tagStyle(t)}`}>
+                            {t}
+                          </span>
+                        ))}
+                        {/* transition-all은 모든 속성을 감시한다 — 여기서 변하는 건 filter뿐 */}
+                        <span className={`text-[var(--text2)] transition-[filter] duration-200 ${revealed ? '' : 'blur-sm'}`}>
+                          {m.korean}
+                        </span>
+                      </div>
                     ))}
                   </div>
-                  {/* transition-all은 모든 속성을 감시한다 — 여기서 변하는 건 filter뿐 */}
-                  <p className={`mt-1.5 text-[var(--text2)] transition-[filter] duration-200 ${revealed ? '' : 'blur-sm'}`}>
-                    {word.korean}
-                  </p>
-                  {word.example_sentence && revealed && (
-                    <p className="text-xs text-[var(--text3)] mt-1.5 italic leading-relaxed line-clamp-2">
-                      &ldquo;{word.example_sentence}&rdquo;
-                    </p>
-                  )}
                 </div>
 
                 {/* Action buttons */}
@@ -302,50 +287,23 @@ export default function GroupDetailPage() {
             <div className="px-5 pb-2">
               <h2 className="text-lg font-bold text-[var(--text)] mb-5">단어 수정</h2>
               <form onSubmit={handleEdit}>
-                <div className="space-y-4 mb-5">
+                {/* 뜻을 여러 개 넣으면 시트가 화면을 넘길 수 있다 → 안쪽만 스크롤 */}
+                <div className="space-y-4 mb-5 max-h-[55dvh] overflow-y-auto -mx-1 px-1">
                   <div className="space-y-1.5">
                     <label className="block text-sm font-semibold text-[var(--text2)]">영어 단어 *</label>
                     <input
                       type="text"
-                      value={editForm.english}
-                      onChange={e => setEditForm(f => ({ ...f, english: e.target.value }))}
-                      required
-                      autoFocus
-                      className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all min-h-[48px]"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="block text-sm font-semibold text-[var(--text2)]">한글 뜻 *</label>
-                    <input
-                      type="text"
-                      value={editForm.korean}
-                      onChange={e => setEditForm(f => ({ ...f, korean: e.target.value }))}
+                      value={editEnglish}
+                      onChange={e => setEditEnglish(e.target.value)}
                       required
                       className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all min-h-[48px]"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="block text-sm font-semibold text-[var(--text2)]">품사 <span className="text-[var(--text3)] font-normal">(복수 선택 가능)</span></label>
-                    <div className="flex gap-2 flex-wrap">
-                      {POS_OPTIONS.map(opt => {
-                        const selected = editForm.part_of_speech.includes(opt.value);
-                        return (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => togglePos(opt.value)}
-                            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors border ${
-                              selected
-                                ? `${POS_STYLE[opt.value]} border-transparent`
-                                : 'bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:bg-[var(--border)]'
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <MeaningEditor
+                    meanings={editMeanings}
+                    onChange={setEditMeanings}
+                    tagSuggestions={tagSuggestions}
+                  />
                 </div>
                 <div className="flex gap-3 pb-2">
                   <button

@@ -66,12 +66,32 @@ create table words (
   user_id uuid not null references auth.users(id) on delete cascade,
   group_id uuid references groups(id) on delete cascade,
   english text not null,
-  korean text not null,
-  part_of_speech text[],           -- 복수 선택 가능: {noun, verb, adjective, adverb}
-  example_sentence text,
+  meanings jsonb not null default '[]',  -- 아래 참고. 이게 뜻의 원본이다.
+  korean text not null,            -- meanings에서 파생 (뜻들을 ", "로 이어붙임)
+  part_of_speech text[],           -- meanings에서 파생 (품사 중복 제거)
+  example_sentence text,           -- 사용 안 함. 옛 데이터만 남아 있음.
   created_at timestamptz default now()
 );
 ```
+
+**meanings** — 뜻 하나마다 품사와 태그를 따로 단다. 품사와 태그는 서로 독립이라
+셋 다 가능하다: 품사만, 태그만, 둘 다.
+```json
+[
+  { "pos": "noun", "tags": ["불가산명사"], "korean": "정보" },
+  { "pos": "verb", "tags": [], "korean": "알리다" },
+  { "pos": null,   "tags": ["가산명사"], "korean": "..." }
+]
+```
+- `pos`: noun | verb | adjective | adverb | null — 사전 API가 자동 추천, 칩 색 고정
+- `tags`: 직접 만드는 라벨(불가산명사, 자동사 …). 색은 이름 해시로 정해져 늘 같다.
+- 퀴즈는 뜻 하나를 골라 칩을 보여주고 그 뜻만 정답으로 본다.
+
+`korean`·`part_of_speech`를 남겨둔 이유: `korean`이 not null이고, 퀴즈 결과·기록 화면이
+단어를 한 줄로 요약할 때 읽는다. API가 쓸 때마다 meanings에서 만들어 동기화한다
+(`lib/meanings.ts`의 `deriveKorean`/`derivePos`).
+
+기존 DB에 적용하려면 `supabase/migration-meanings.sql`을 SQL Editor에서 한 번 실행.
 
 ### quiz_sessions 테이블
 ```sql

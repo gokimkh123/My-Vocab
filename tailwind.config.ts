@@ -8,6 +8,9 @@ const config: Config = {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    // 품사·태그 칩 색이 lib/meanings.ts에 문자열로 들어 있다. 여기가 빠지면
+    // Tailwind가 그 클래스들을 못 보고 칩 색이 통째로 안 나온다.
+    "./lib/**/*.{js,ts}",
   ],
   theme: {
     extend: {
