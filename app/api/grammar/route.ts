@@ -30,7 +30,11 @@ export async function GET(): Promise<NextResponse> {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
-  if (error) return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
+  if (error) {
+    // 실제 원인은 Vercel 함수 로그에서만 보인다 (스키마 캐시 미갱신 등 구분용)
+    console.error('[api/grammar] GET', error.code, error.message);
+    return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
+  }
   return NextResponse.json({ data, error: null }, { headers: NO_STORE });
 }
 
@@ -63,7 +67,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     .select(CARD_COLS)
     .single();
 
-  if (error) return NextResponse.json({ data: null, error: '카드 추가에 실패했습니다.' }, { status: 500 });
+  if (error) {
+    console.error('[api/grammar] POST', error.code, error.message);
+    return NextResponse.json({ data: null, error: '카드 추가에 실패했습니다.' }, { status: 500 });
+  }
   return NextResponse.json({ data, error: null }, { status: 201 });
 }
 
@@ -98,7 +105,10 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<ApiRespo
     .select(CARD_COLS)
     .single();
 
-  if (error) return NextResponse.json({ data: null, error: '수정에 실패했습니다.' }, { status: 500 });
+  if (error) {
+    console.error('[api/grammar] PATCH', error.code, error.message);
+    return NextResponse.json({ data: null, error: '수정에 실패했습니다.' }, { status: 500 });
+  }
   return NextResponse.json({ data, error: null });
 }
 
@@ -118,6 +128,9 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
     .eq('id', id)
     .eq('user_id', user.id);
 
-  if (error) return NextResponse.json({ data: null, error: '삭제에 실패했습니다.' }, { status: 500 });
+  if (error) {
+    console.error('[api/grammar] DELETE', error.code, error.message);
+    return NextResponse.json({ data: null, error: '삭제에 실패했습니다.' }, { status: 500 });
+  }
   return NextResponse.json({ data: null, error: null });
 }

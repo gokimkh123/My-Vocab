@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from 'react';
 
 type ToastType = 'success' | 'error' | 'info';
 type ToastItem = { id: number; message: string; type: ToastType; exiting?: boolean };
@@ -49,8 +49,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     timers.current.add(t);
   }, [dismiss]);
 
+  // 렌더마다 새 객체를 넘기면 toast를 deps에 둔 효과가
+  // "토스트 표시 → 리렌더 → 효과 재실행"으로 무한 반복한다. 반드시 참조를 고정할 것.
+  const value = useMemo(() => ({ show }), [show]);
+
   return (
-    <ToastCtx.Provider value={{ show }}>
+    <ToastCtx.Provider value={value}>
       {children}
       <div
         className="fixed left-0 right-0 z-[200] flex flex-col gap-2 px-4 pointer-events-none"
