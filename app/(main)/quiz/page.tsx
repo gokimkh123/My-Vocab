@@ -10,20 +10,17 @@ export default function QuizSetupPage() {
   const [groupId, setGroupId] = useState('');
   const [quizType, setQuizType] = useState<'en_to_ko' | 'ko_to_en'>('en_to_ko');
   const [wordCount, setWordCount] = useState(10);
-  const [maxCount, setMaxCount] = useState(10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 단어 수는 단어장 목록 응답(word_count)에 이미 있다 → count_only 재조회 요청을 없앴다
+  const selectedGroup = groups.find(g => g.id === groupId);
+  const maxCount = selectedGroup?.word_count ?? 0;
+
   useEffect(() => {
     if (!groupId) return;
-    fetch(`/api/words?group_id=${groupId}&count_only=true`)
-      .then(r => r.json())
-      .then(res => {
-        const count = res.data?.count ?? 0;
-        setMaxCount(count);
-        setWordCount(Math.min(10, count));
-      });
-  }, [groupId]);
+    setWordCount(Math.min(10, maxCount));
+  }, [groupId, maxCount]);
 
   async function handleStart(e: React.FormEvent) {
     e.preventDefault();
@@ -46,8 +43,6 @@ export default function QuizSetupPage() {
 
     router.push(`/quiz/${data.data.id}`);
   }
-
-  const selectedGroup = groups.find(g => g.id === groupId);
 
   return (
     <div className="animate-fade-in">

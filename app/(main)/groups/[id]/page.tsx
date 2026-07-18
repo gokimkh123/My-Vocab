@@ -11,7 +11,9 @@ import { useGroup } from '@/hooks/useGroup';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { useWords } from '@/hooks/useWords';
 import { POS_LABEL, POS_STYLE, emptyMeaning, tagStyle } from '@/lib/meanings';
-import type { Meaning, Word } from '@/lib/supabase/types';
+import type { Group, Meaning, Word } from '@/lib/supabase/types';
+
+type GroupsCache = { data: Group[]; error?: string };
 
 export default function GroupDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -111,8 +113,14 @@ export default function GroupDetailPage() {
         prev => prev ? { ...prev, data: prev.data.filter(w => w.id !== wordId) } : prev,
         { revalidate: false }
       );
-      // 단어장 목록에 표시되는 단어 수도 줄어든다
-      mutate('/api/groups');
+      // 단어장 목록의 단어 수도 로컬에서 -1 — 목록 전체를 재요청하지 않는다
+      mutate<GroupsCache>(
+        '/api/groups',
+        prev => prev
+          ? { ...prev, data: prev.data.map(g => g.id === id ? { ...g, word_count: Math.max(0, (g.word_count ?? 1) - 1) } : g) }
+          : prev,
+        { revalidate: false }
+      );
     }
     setDeletingId(null);
   }

@@ -9,9 +9,10 @@ import { useToast } from '@/components/Toast';
 import { useGroups } from '@/hooks/useGroups';
 import { useWords } from '@/hooks/useWords';
 import { POS_LABEL, cleanMeanings, emptyMeaning } from '@/lib/meanings';
-import type { Meaning, Word } from '@/lib/supabase/types';
+import type { Group, Meaning, Word } from '@/lib/supabase/types';
 
 type WordsCache = { data: Word[]; error?: string };
+type GroupsCache = { data: Group[]; error?: string };
 
 const INPUT_CLASS =
   'w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-[var(--focus)] focus:border-[var(--text3)] transition-all min-h-[48px]';
@@ -104,8 +105,14 @@ export default function AddWordPage() {
       prev => (prev ? { ...prev, data: [data.data, ...prev.data] } : prev),
       { revalidate: false }
     );
-    // 단어장 목록에 단어 수가 표시된다 → 같이 갱신
-    mutate('/api/groups');
+    // 단어장 목록의 단어 수도 로컬에서 +1 — 목록 전체를 재요청하지 않는다
+    mutate<GroupsCache>(
+      '/api/groups',
+      prev => prev
+        ? { ...prev, data: prev.data.map(g => g.id === groupId ? { ...g, word_count: (g.word_count ?? 0) + 1 } : g) }
+        : prev,
+      { revalidate: false }
+    );
     setAddedCount(c => c + 1);
     toast.show(`'${english.trim()}' 추가됨`, 'success');
 
