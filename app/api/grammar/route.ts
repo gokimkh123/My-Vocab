@@ -31,9 +31,10 @@ export async function GET(): Promise<NextResponse> {
     .order('created_at', { ascending: false });
 
   if (error) {
-    // 실제 원인은 Vercel 함수 로그에서만 보인다 (스키마 캐시 미갱신 등 구분용)
     console.error('[api/grammar] GET', error.code, error.message);
-    return NextResponse.json({ data: null, error: '데이터를 불러오지 못했습니다.' }, { status: 500 });
+    // 나만 쓰는 앱 — 에러 코드를 토스트에 그대로 노출해 대시보드 없이 원인을 특정한다
+    // (PGRST205=스키마 캐시에 테이블 없음, 42501=권한 없음)
+    return NextResponse.json({ data: null, error: `데이터를 불러오지 못했습니다. [${error.code ?? 'unknown'}]` }, { status: 500 });
   }
   return NextResponse.json({ data, error: null }, { headers: NO_STORE });
 }
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
   if (error) {
     console.error('[api/grammar] POST', error.code, error.message);
-    return NextResponse.json({ data: null, error: '카드 추가에 실패했습니다.' }, { status: 500 });
+    return NextResponse.json({ data: null, error: `카드 추가에 실패했습니다. [${error.code ?? 'unknown'}]` }, { status: 500 });
   }
   return NextResponse.json({ data, error: null }, { status: 201 });
 }
@@ -107,7 +108,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<ApiRespo
 
   if (error) {
     console.error('[api/grammar] PATCH', error.code, error.message);
-    return NextResponse.json({ data: null, error: '수정에 실패했습니다.' }, { status: 500 });
+    return NextResponse.json({ data: null, error: `수정에 실패했습니다. [${error.code ?? 'unknown'}]` }, { status: 500 });
   }
   return NextResponse.json({ data, error: null });
 }
@@ -130,7 +131,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
 
   if (error) {
     console.error('[api/grammar] DELETE', error.code, error.message);
-    return NextResponse.json({ data: null, error: '삭제에 실패했습니다.' }, { status: 500 });
+    return NextResponse.json({ data: null, error: `삭제에 실패했습니다. [${error.code ?? 'unknown'}]` }, { status: 500 });
   }
   return NextResponse.json({ data: null, error: null });
 }
