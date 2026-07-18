@@ -37,9 +37,15 @@ export default function GrammarPage() {
   }, [error, toast]);
 
   useEffect(() => {
-    if (sheetOpen) document.body.classList.add('modal-open');
-    else document.body.classList.remove('modal-open');
-    return () => document.body.classList.remove('modal-open');
+    if (!sheetOpen) return;
+    document.body.classList.add('modal-open');
+    // 포커스가 옮겨질 때 크롬이 뒤 배경 페이지까지 스크롤해서 화면 전체가 들썩인다 → 배경을 잠근다
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.classList.remove('modal-open');
+      document.body.style.overflow = prev;
+    };
   }, [sheetOpen]);
 
   const topics = useMemo(
@@ -296,8 +302,13 @@ export default function GrammarPage() {
             {/* 키보드가 올라오면 시트가 위로 밀린다 — 남은 화면 높이만큼만 쓰고 안쪽을 스크롤해야
                 상단(제목·규칙 칸)이 화면 밖으로 잘리지 않는다. 110px = 핸들·여백 + 상단 여유분 */}
             <div
-              className="px-5 pb-2 overflow-y-auto"
-              style={{ maxHeight: `min(55dvh, calc(100dvh - ${sheetBottom + 110}px))` }}
+              className="px-5 pb-2 overflow-y-auto overscroll-contain scroll-smooth"
+              style={{
+                maxHeight: `min(55dvh, calc(100dvh - ${sheetBottom + 110}px))`,
+                // 시트 위치(bottom)와 같은 0.2s로 높이도 함께 움직여야 한 덩어리로 보인다.
+                // 높이만 뚝 바뀌면 포커스를 옮길 때 내용이 튄다. 칸으로의 스크롤은 scroll-smooth가 맡는다.
+                transition: 'max-height 0.2s ease',
+              }}
             >
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-lg font-bold text-[var(--text)]">{editing ? '카드 수정' : '새 문법 카드'}</h2>

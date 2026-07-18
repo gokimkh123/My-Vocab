@@ -44,9 +44,15 @@ export default function GroupDetailPage() {
   }, [error, toast]);
 
   useEffect(() => {
-    if (editingWord) document.body.classList.add('modal-open');
-    else document.body.classList.remove('modal-open');
-    return () => document.body.classList.remove('modal-open');
+    if (!editingWord) return;
+    document.body.classList.add('modal-open');
+    // 포커스가 옮겨질 때 크롬이 뒤 배경 페이지까지 스크롤해서 화면 전체가 들썩인다 → 배경을 잠근다
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.classList.remove('modal-open');
+      document.body.style.overflow = prev;
+    };
   }, [editingWord]);
 
   function toggleReveal(wordId: string) {
@@ -299,8 +305,11 @@ export default function GroupDetailPage() {
                     키보드가 올라오면 남은 화면 높이에 맞춰 줄여야 시트 상단이 잘리지 않는다.
                     220px = 핸들·제목·버튼 줄·여백 + 상단 여유분 */}
                 <div
-                  className="space-y-4 mb-5 overflow-y-auto -mx-1 px-1"
-                  style={{ maxHeight: `min(55dvh, calc(100dvh - ${sheetBottom + 220}px))` }}
+                  className="space-y-4 mb-5 overflow-y-auto overscroll-contain scroll-smooth -mx-1 px-1"
+                  style={{
+                    maxHeight: `min(55dvh, calc(100dvh - ${sheetBottom + 220}px))`,
+                    transition: 'max-height 0.2s ease',
+                  }}
                 >
                   <div className="space-y-1.5">
                     <label className="block text-sm font-semibold text-[var(--text2)]">영어 단어 *</label>
