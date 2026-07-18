@@ -287,12 +287,21 @@ export default function GroupDetailPage() {
             <div className="px-5 pb-2">
               <h2 className="text-lg font-bold text-[var(--text)] mb-5">단어 수정</h2>
               <form onSubmit={handleEdit}>
-                {/* 뜻을 여러 개 넣으면 시트가 화면을 넘길 수 있다 → 안쪽만 스크롤 */}
-                <div className="space-y-4 mb-5 max-h-[55dvh] overflow-y-auto -mx-1 px-1">
+                {/* 뜻을 여러 개 넣으면 시트가 화면을 넘길 수 있다 → 안쪽만 스크롤.
+                    키보드가 올라오면 남은 화면 높이에 맞춰 줄여야 시트 상단이 잘리지 않는다.
+                    220px = 핸들·제목·버튼 줄·여백 + 상단 여유분 */}
+                <div
+                  className="space-y-4 mb-5 overflow-y-auto -mx-1 px-1"
+                  style={{ maxHeight: `min(55dvh, calc(100dvh - ${sheetBottom + 220}px))` }}
+                >
                   <div className="space-y-1.5">
                     <label className="block text-sm font-semibold text-[var(--text2)]">영어 단어 *</label>
                     <input
                       type="text"
+                      lang="en"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
                       value={editEnglish}
                       onChange={e => setEditEnglish(e.target.value)}
                       required

@@ -7,9 +7,9 @@ import ThemeToggle from '@/components/ThemeToggle';
 
 type Props = { signOut: () => Promise<void> };
 
+// 단어 추가는 단어장 상세의 "+ 단어 추가" 버튼으로 들어간다 → 탭에서는 뺐다
 const tabs = [
   { href: '/groups',       label: '단어장', Icon: BookIcon   },
-  { href: '/words/add',    label: '추가',   Icon: PlusIcon   },
   { href: '/grammar',      label: '문법',   Icon: LayersIcon },
   { href: '/quiz',         label: '퀴즈',   Icon: ZapIcon    },
   { href: '/quiz/history', label: '기록',   Icon: ChartIcon  },
@@ -35,9 +35,9 @@ export default function MobileNav({ signOut }: Props) {
   function isActive(href: string) {
     if (href === '/quiz/history') return pathname === '/quiz/history';
     if (href === '/quiz') return pathname.startsWith('/quiz') && pathname !== '/quiz/history';
-    if (href === '/groups') return pathname.startsWith('/groups');
+    // 단어 추가(/words/*)는 단어장에서 들어가므로 단어장 탭을 켜둔다
+    if (href === '/groups') return pathname.startsWith('/groups') || pathname.startsWith('/words');
     if (href === '/grammar') return pathname.startsWith('/grammar');
-    if (href === '/words/add') return pathname.startsWith('/words');
     return false;
   }
 
@@ -145,16 +145,6 @@ function BookIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="9"/>
-      <line x1="12" y1="8" x2="12" y2="16"/>
-      <line x1="8" y1="12" x2="16" y2="12"/>
     </svg>
   );
 }

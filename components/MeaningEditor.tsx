@@ -79,6 +79,7 @@ export default function MeaningEditor({ meanings, onChange, tagSuggestions = [] 
             <label className="block text-xs font-semibold text-[var(--text2)] mb-1.5">한글 뜻 *</label>
             <input
               type="text"
+              lang="ko"
               value={m.korean}
               onChange={e => update(i, { korean: e.target.value })}
               placeholder="예: 어휘, 단어"
@@ -150,6 +151,7 @@ function TagField({
       <div className="flex gap-2">
         <input
           type="text"
+          lang="ko"
           value={draft}
           onChange={e => setDraft(e.target.value)}
           // form 안이라 Enter가 단어 저장으로 새지 않게 막고 태그 추가로만 쓴다

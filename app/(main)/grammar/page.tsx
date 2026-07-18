@@ -293,7 +293,12 @@ export default function GrammarPage() {
             onClick={e => e.stopPropagation()}
           >
             <div className="w-10 h-1 bg-[var(--border2)] rounded-full mx-auto mt-3 mb-5" />
-            <div className="px-5 pb-2 max-h-[55dvh] overflow-y-auto">
+            {/* 키보드가 올라오면 시트가 위로 밀린다 — 남은 화면 높이만큼만 쓰고 안쪽을 스크롤해야
+                상단(제목·규칙 칸)이 화면 밖으로 잘리지 않는다. 110px = 핸들·여백 + 상단 여유분 */}
+            <div
+              className="px-5 pb-2 overflow-y-auto"
+              style={{ maxHeight: `min(55dvh, calc(100dvh - ${sheetBottom + 110}px))` }}
+            >
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-lg font-bold text-[var(--text)]">{editing ? '카드 수정' : '새 문법 카드'}</h2>
                 {editing && (
@@ -313,6 +318,7 @@ export default function GrammarPage() {
                     <label className="block text-sm font-semibold text-[var(--text2)]">규칙 *</label>
                     <input
                       type="text"
+                      lang="ko"
                       value={title}
                       onChange={e => setTitle(e.target.value)}
                       required
@@ -349,6 +355,10 @@ export default function GrammarPage() {
                     <div className="flex gap-2">
                       <input
                         type="text"
+                        lang="en"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
                         value={itemDraft}
                         onChange={e => {
                           const v = e.target.value;
@@ -381,6 +391,7 @@ export default function GrammarPage() {
                     </label>
                     <input
                       type="text"
+                      lang="ko"
                       value={topic}
                       onChange={e => setTopic(e.target.value)}
                       placeholder="예: to부정사"
@@ -408,6 +419,7 @@ export default function GrammarPage() {
                     </label>
                     <input
                       type="text"
+                      lang="ko"
                       value={memo}
                       onChange={e => setMemo(e.target.value)}
                       placeholder="예: 소원·계획·결심은 아직 안 한 일 → to"

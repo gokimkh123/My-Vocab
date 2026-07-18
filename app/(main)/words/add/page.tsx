@@ -149,6 +149,7 @@ export default function AddWordPage() {
               <input
                 ref={englishRef}
                 type="text"
+                lang="en"
                 value={english}
                 onChange={e => setEnglish(e.target.value)}
                 onBlur={lookupDictionary}

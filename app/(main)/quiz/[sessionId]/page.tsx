@@ -295,6 +295,7 @@ export default function QuizSessionPage() {
           <input
             ref={inputRef}
             type="text"
+            lang={session.quiz_type === 'en_to_ko' ? 'ko' : 'en'}
             value={answer}
             onChange={e => setAnswer(e.target.value)}
             autoCapitalize="none"
