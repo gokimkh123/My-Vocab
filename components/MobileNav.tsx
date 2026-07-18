@@ -8,10 +8,11 @@ import ThemeToggle from '@/components/ThemeToggle';
 type Props = { signOut: () => Promise<void> };
 
 const tabs = [
-  { href: '/groups',       label: '단어장', Icon: BookIcon  },
-  { href: '/words/add',    label: '추가',   Icon: PlusIcon  },
-  { href: '/quiz',         label: '퀴즈',   Icon: ZapIcon   },
-  { href: '/quiz/history', label: '기록',   Icon: ChartIcon },
+  { href: '/groups',       label: '단어장', Icon: BookIcon   },
+  { href: '/words/add',    label: '추가',   Icon: PlusIcon   },
+  { href: '/grammar',      label: '문법',   Icon: LayersIcon },
+  { href: '/quiz',         label: '퀴즈',   Icon: ZapIcon    },
+  { href: '/quiz/history', label: '기록',   Icon: ChartIcon  },
 ];
 
 export default function MobileNav({ signOut }: Props) {
@@ -35,6 +36,7 @@ export default function MobileNav({ signOut }: Props) {
     if (href === '/quiz/history') return pathname === '/quiz/history';
     if (href === '/quiz') return pathname.startsWith('/quiz') && pathname !== '/quiz/history';
     if (href === '/groups') return pathname.startsWith('/groups');
+    if (href === '/grammar') return pathname.startsWith('/grammar');
     if (href === '/words/add') return pathname.startsWith('/words');
     return false;
   }
@@ -153,6 +155,16 @@ function PlusIcon() {
       <circle cx="12" cy="12" r="9"/>
       <line x1="12" y1="8" x2="12" y2="16"/>
       <line x1="8" y1="12" x2="16" y2="12"/>
+    </svg>
+  );
+}
+
+function LayersIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+      <polyline points="2 17 12 22 22 17"/>
+      <polyline points="2 12 12 17 22 12"/>
     </svg>
   );
 }

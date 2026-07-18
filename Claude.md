@@ -32,6 +32,8 @@ app/
 │   │   └── [id]/page.tsx         # 그룹 상세 (단어 목록)
 │   ├── words/
 │   │   └── add/page.tsx          # 단어 추가
+│   ├── grammar/
+│   │   └── page.tsx              # 문법 카드 (규칙 하나 = 카드 하나, 전체화면 암기 모드)
 │   └── quiz/
 │       ├── page.tsx              # 퀴즈 설정
 │       ├── [sessionId]/page.tsx  # 퀴즈 진행
@@ -40,6 +42,7 @@ app/
 │   ├── words/route.ts
 │   ├── groups/route.ts
 │   ├── quiz/route.ts
+│   ├── grammar/route.ts          # 문법 카드 CRUD
 │   └── dictionary/route.ts       # Free Dictionary API 프록시
 └── layout.tsx
 ```
@@ -120,6 +123,21 @@ create table quiz_results (
 );
 ```
 
+### grammar_cards 테이블
+```sql
+create table grammar_cards (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  topic text,                                -- 주제 묶음 (to부정사, 동명사 …) — 자유 입력
+  title text not null,                       -- 규칙 (예: to부정사를 목적어로 취하는 동사)
+  items jsonb not null default '[]'::jsonb,  -- 해당 단어들 ["want","wish","hope"]
+  memo text,                                 -- 암기팁 한 줄
+  created_at timestamptz default now()
+);
+```
+문법 규칙 암기용 카드. 단어(items)는 태그와 같은 해시 색 칩으로 표시된다.
+기존 DB에 적용하려면 `supabase/migration-grammar.sql`을 SQL Editor에서 한 번 실행.
+
 ## 기능 명세
 
 ### 1. 단어 추가
@@ -152,6 +170,12 @@ create table quiz_results (
 - 날짜별 퀴즈 기록 조회
 - 틀린 단어만 모아서 재시험 기능
 - 오답 단어 복습 뷰
+
+### 5. 문법 카드 (하단 탭 "문법")
+- 규칙 하나 = 카드 하나 (예: "to부정사를 목적어로 취하는 동사" + want, wish, hope …)
+- 주제(to부정사/동명사 …)로 묶어 필터. 단어는 색깔 칩(태그와 같은 해시 색)
+- 암기 모드: 전체화면에 규칙만 → 탭하면 단어 공개 → 탭/스와이프로 다음, 셔플·이전 지원
+- 단어 입력은 쉼표·Enter로 칩 추가 ("want, wish, hope" 붙여넣기 지원)
 
 ## 보안 규칙
 - Supabase RLS(Row Level Security) 활성화

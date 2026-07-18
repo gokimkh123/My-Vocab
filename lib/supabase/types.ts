@@ -44,6 +44,16 @@ export type QuizResult = {
   created_at: string;
 };
 
+/** 문법 카드 — 규칙 하나("to부정사를 목적어로 취하는 동사")와 해당 단어들 */
+export type GrammarCard = {
+  id: string;
+  topic: string | null;   // 주제 묶음 (to부정사, 동명사 …) — 자유 입력
+  title: string;          // 규칙
+  items: string[];        // 해당 단어들 (want, wish …)
+  memo: string | null;    // 암기팁 한 줄
+  created_at: string;
+};
+
 export type ApiResponse<T> = {
   data: T | null;
   error: string | null;
