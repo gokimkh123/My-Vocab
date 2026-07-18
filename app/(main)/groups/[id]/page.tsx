@@ -78,6 +78,11 @@ export default function GroupDetailPage() {
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault();
     if (!editingWord) return;
+    // 폼이 noValidate라 required가 안 먹는다 — 여기서 직접 확인
+    if (!editEnglish.trim()) {
+      toast.show('영어 단어를 입력해주세요.', 'error');
+      return;
+    }
     setSubmitting(true);
 
     const res = await fetch('/api/words', {
@@ -300,7 +305,8 @@ export default function GroupDetailPage() {
             <div className="w-10 h-1 bg-[var(--border2)] rounded-full mx-auto mt-3 mb-5" />
             <div className="px-5 pb-2">
               <h2 className="text-lg font-bold text-[var(--text)] mb-5">단어 수정</h2>
-              <form onSubmit={handleEdit}>
+              {/* noValidate: 영어 칸이 type=email(영문 자판 강제용)이라 이메일 검증을 꺼야 저장된다 */}
+              <form onSubmit={handleEdit} noValidate>
                 {/* 뜻을 여러 개 넣으면 시트가 화면을 넘길 수 있다 → 안쪽만 스크롤.
                     키보드가 올라오면 남은 화면 높이에 맞춰 줄여야 시트 상단이 잘리지 않는다.
                     220px = 핸들·제목·버튼 줄·여백 + 상단 여유분 */}
@@ -313,9 +319,11 @@ export default function GroupDetailPage() {
                 >
                   <div className="space-y-1.5">
                     <label className="block text-sm font-semibold text-[var(--text2)]">영어 단어 *</label>
+                    {/* type=email: 삼성 키보드에 영문 자판을 강제한다 (lang 힌트는 무시함) */}
                     <input
-                      type="text"
+                      type="email"
                       lang="en"
+                      autoComplete="off"
                       autoCapitalize="none"
                       autoCorrect="off"
                       spellCheck={false}

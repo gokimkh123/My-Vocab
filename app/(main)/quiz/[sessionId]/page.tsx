@@ -291,10 +291,12 @@ export default function QuizSessionPage() {
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-3">
+        // noValidate: 한→영 답 칸이 type=email(영문 자판 강제용)이라 이메일 검증을 꺼야 제출된다
+        <form onSubmit={handleSubmit} className="space-y-3" noValidate>
           <input
             ref={inputRef}
-            type="text"
+            type={session.quiz_type === 'ko_to_en' ? 'email' : 'text'}
+            autoComplete="off"
             lang={session.quiz_type === 'en_to_ko' ? 'ko' : 'en'}
             value={answer}
             onChange={e => setAnswer(e.target.value)}

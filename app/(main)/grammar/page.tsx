@@ -99,6 +99,11 @@ export default function GrammarPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // 폼이 noValidate라 required가 안 먹는다 — 여기서 직접 확인
+    if (!title.trim()) {
+      toast.show('규칙을 입력해주세요.', 'error');
+      return;
+    }
     // 입력창에 남아 있는 단어도 저장에 포함한다 (Enter를 안 눌렀어도)
     const finalItems = [...items];
     for (const p of itemDraft.split(',').map(s => s.trim()).filter(Boolean)) {
@@ -323,7 +328,8 @@ export default function GrammarPage() {
                   </button>
                 )}
               </div>
-              <form onSubmit={handleSubmit}>
+              {/* noValidate: 단어 칸이 type=email(영문 자판 강제용)이라 이메일 검증을 꺼야 저장된다 */}
+              <form onSubmit={handleSubmit} noValidate>
                 <div className="space-y-4 mb-5">
                   <div className="space-y-1.5">
                     <label className="block text-sm font-semibold text-[var(--text2)]">규칙 *</label>
@@ -364,9 +370,11 @@ export default function GrammarPage() {
                       </div>
                     )}
                     <div className="flex gap-2">
+                      {/* type=email: 삼성 키보드에 영문 자판을 강제한다 (lang 힌트는 무시함) */}
                       <input
-                        type="text"
+                        type="email"
                         lang="en"
+                        autoComplete="off"
                         autoCapitalize="none"
                         autoCorrect="off"
                         spellCheck={false}

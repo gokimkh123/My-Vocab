@@ -74,6 +74,11 @@ export default function AddWordPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // 폼이 noValidate라 required가 안 먹는다 — 여기서 직접 확인
+    if (!english.trim()) {
+      setError('영어 단어를 입력해주세요.');
+      return;
+    }
     if (!groupId) {
       setError('단어장을 선택해주세요.');
       return;
@@ -143,7 +148,8 @@ export default function AddWordPage() {
         <p className="text-sm text-[var(--text2)] mb-5">저장하면 같은 단어장에 계속 이어서 추가할 수 있어요</p>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      {/* noValidate: 영어 칸이 type=email(아래 참고)이라 브라우저 이메일 검증을 꺼야 저장된다 */}
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         {/* Section: 단어 */}
         <div
           className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-4"
@@ -153,10 +159,13 @@ export default function AddWordPage() {
           <div>
             <label className={LABEL_CLASS}>영어 단어 *</label>
             <div className="flex gap-2">
+              {/* type=email: 삼성 키보드는 lang 힌트를 무시하지만 email 입력엔 영문 자판을 강제로 띄운다.
+                  이메일 형식 검증은 폼의 noValidate로 끄고 필수 여부는 JS가 확인한다. */}
               <input
                 ref={englishRef}
-                type="text"
+                type="email"
                 lang="en"
+                autoComplete="off"
                 value={english}
                 onChange={e => setEnglish(e.target.value)}
                 onBlur={lookupDictionary}
