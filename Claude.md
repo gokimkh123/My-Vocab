@@ -128,7 +128,7 @@ create table quiz_results (
 create table grammar_cards (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  topic text,                                -- 주제 묶음 (to부정사, 동명사 …) — 자유 입력
+  topic text,                                -- (미사용) 규칙 한 칸으로 합치면서 화면에서 뺐다. 예전 값 보존용
   title text not null,                       -- 규칙 (예: to부정사를 목적어로 취하는 동사)
   items jsonb not null default '[]'::jsonb,  -- 해당 단어들 ["want","wish","hope"]
   memo text,                                 -- 암기팁 한 줄
@@ -173,9 +173,11 @@ create table grammar_cards (
 
 ### 5. 문법 카드 (하단 탭 "문법")
 - 규칙 하나 = 카드 하나 (예: "to부정사를 목적어로 취하는 동사" + want, wish, hope …)
-- 주제(to부정사/동명사 …)로 묶어 필터. 단어는 색깔 칩(태그와 같은 해시 색)
+- 입력 칸은 규칙 / 단어 / 암기팁 셋뿐 — 주제 칸은 규칙과 겹쳐서 없앴다(topic 컬럼은 남겨 둠)
+- 단어는 색깔 칩(태그와 같은 해시 색), 규칙보다 크게 보여 준다 — 카드에서 눈에 먼저 들어와야 한다
 - 암기 모드: 전체화면에 규칙만 → 탭하면 단어 공개 → 탭/스와이프로 다음, 셔플·이전 지원
-- 단어 입력은 쉼표·Enter로 칩 추가 ("want, wish, hope" 붙여넣기 지원)
+- 단어 입력은 쉼표·점·Enter로 칩 추가 ("want. wish. hope" 붙여넣기 지원).
+  점을 받는 이유: 단어 칸이 type=email이라 삼성 키보드 기본 자판에서 쉼표는 한 단계 더 들어가야 한다
 
 ## 보안 규칙
 - Supabase RLS(Row Level Security) 활성화

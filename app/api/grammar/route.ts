@@ -93,14 +93,17 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<ApiRespo
     return NextResponse.json({ data: null, error: '필수 항목을 모두 입력해주세요.' }, { status: 400 });
   }
 
+  // topic은 화면에서 뺐다(규칙 한 칸으로 통합) — 요청에 없으면 예전 카드에 저장된 값을 건드리지 않는다
+  const patch: Record<string, unknown> = {
+    title: title.trim(),
+    items: cleanItems(items),
+    memo: memo?.trim() || null,
+  };
+  if (topic !== undefined) patch.topic = topic?.trim() || null;
+
   const { data, error } = await supabase
     .from('grammar_cards')
-    .update({
-      topic: topic?.trim() || null,
-      title: title.trim(),
-      items: cleanItems(items),
-      memo: memo?.trim() || null,
-    })
+    .update(patch)
     .eq('id', id)
     .eq('user_id', user.id)
     .select(CARD_COLS)

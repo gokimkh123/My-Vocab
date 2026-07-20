@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { WordCardSkeleton } from '@/components/Skeleton';
 import { useToast } from '@/components/Toast';
 import { useGrammarCards } from '@/hooks/useGrammarCards';
@@ -16,13 +16,11 @@ export default function GrammarPage() {
   const toast = useToast();
   const { cards, isLoading: loading, error, mutate } = useGrammarCards();
 
-  const [topicFilter, setTopicFilter] = useState<string | null>(null);
   const [studyCards, setStudyCards] = useState<GrammarCard[] | null>(null);
 
   // 작성/수정 시트 — editing이 null이면 새 카드
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<GrammarCard | null>(null);
-  const [topic, setTopic] = useState('');
   const [title, setTitle] = useState('');
   const [items, setItems] = useState<string[]>([]);
   const [itemDraft, setItemDraft] = useState('');
@@ -48,26 +46,8 @@ export default function GrammarPage() {
     };
   }, [sheetOpen]);
 
-  const topics = useMemo(
-    () =>
-      Array.from(new Set(cards.map(c => c.topic).filter((t): t is string => !!t)))
-        .sort((a, b) => a.localeCompare(b, 'ko')),
-    [cards]
-  );
-
-  // 필터로 골라둔 주제의 마지막 카드가 삭제되면 필터를 전체로 되돌린다
-  useEffect(() => {
-    if (topicFilter && !topics.includes(topicFilter)) setTopicFilter(null);
-  }, [topics, topicFilter]);
-
-  const filtered = useMemo(
-    () => (topicFilter ? cards.filter(c => c.topic === topicFilter) : cards),
-    [cards, topicFilter]
-  );
-
   function openCreate() {
     setEditing(null);
-    setTopic(topicFilter ?? '');
     setTitle('');
     setItems([]);
     setItemDraft('');
@@ -77,7 +57,6 @@ export default function GrammarPage() {
 
   function openEdit(card: GrammarCard) {
     setEditing(card);
-    setTopic(card.topic ?? '');
     setTitle(card.title);
     setItems(card.items);
     setItemDraft('');
@@ -85,9 +64,9 @@ export default function GrammarPage() {
     setSheetOpen(true);
   }
 
-  /** 쉼표로 여러 개 붙여넣어도 한 번에 칩으로 쪼갠다 */
+  /** 쉼표(,)나 점(.)으로 여러 개 붙여넣어도 한 번에 칩으로 쪼갠다 — 영문 자판(email)에선 점이 제일 누르기 쉽다 */
   function addItems(raw: string) {
-    const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+    const parts = raw.split(/[,.]+/).map(s => s.trim()).filter(Boolean);
     setItemDraft('');
     if (!parts.length) return;
     setItems(prev => {
@@ -106,13 +85,13 @@ export default function GrammarPage() {
     }
     // 입력창에 남아 있는 단어도 저장에 포함한다 (Enter를 안 눌렀어도)
     const finalItems = [...items];
-    for (const p of itemDraft.split(',').map(s => s.trim()).filter(Boolean)) {
+    for (const p of itemDraft.split(/[,.]+/).map(s => s.trim()).filter(Boolean)) {
       if (!finalItems.includes(p)) finalItems.push(p);
     }
 
     setSubmitting(true);
+    // topic은 UI에서 뺐다(규칙 한 칸으로 통합) — 보내지 않으면 서버가 기존 값을 그대로 둔다
     const payload = {
-      topic: topic.trim() || null,
       title: title.trim(),
       items: finalItems,
       memo: memo.trim() || null,
@@ -170,13 +149,6 @@ export default function GrammarPage() {
     setSheetOpen(false);
   }
 
-  const filterChip = (on: boolean) =>
-    `px-3.5 min-h-[40px] inline-flex items-center text-xs font-semibold rounded-lg transition-colors ${
-      on
-        ? 'bg-[var(--primary)] text-[var(--primary-fg)]'
-        : 'bg-[var(--surface2)] text-[var(--text2)] hover:bg-[var(--border)] active:bg-[var(--border)]'
-    }`;
-
   return (
     <div className="animate-fade-in">
       {/* Header */}
@@ -196,35 +168,17 @@ export default function GrammarPage() {
         </button>
       </div>
 
-      {/* Topic filter */}
-      {!loading && topics.length > 0 && (
-        <div className="flex gap-2 flex-wrap mb-4">
-          <button onClick={() => setTopicFilter(null)} className={filterChip(topicFilter === null)}>
-            전체
-          </button>
-          {topics.map(t => (
-            <button
-              key={t}
-              onClick={() => setTopicFilter(topicFilter === t ? null : t)}
-              className={filterChip(topicFilter === t)}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* 암기 시작 */}
-      {!loading && filtered.length > 0 && (
+      {!loading && cards.length > 0 && (
         <button
-          onClick={() => setStudyCards(filtered)}
+          onClick={() => setStudyCards(cards)}
           className="w-full min-h-[52px] mb-5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:bg-[var(--primary-hover)] text-[var(--primary-fg)] rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
             <polygon points="6 3 20 12 6 21 6 3" />
           </svg>
           암기 시작
-          <span className="opacity-60 font-medium">{topicFilter ? `${topicFilter} · ` : ''}{filtered.length}장</span>
+          <span className="opacity-60 font-medium">{cards.length}장</span>
         </button>
       )}
 
@@ -257,25 +211,21 @@ export default function GrammarPage() {
       )}
 
       {/* Cards */}
-      {!loading && filtered.length > 0 && (
+      {!loading && cards.length > 0 && (
         <ul className="space-y-3 animate-slide-up">
-          {filtered.map(card => (
+          {cards.map(card => (
             <li key={card.id}>
               <button
                 onClick={() => openEdit(card)}
                 className="list-card w-full text-left rounded-2xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border2)] active:scale-[0.98] transition-colors px-5 py-4"
                 style={{ boxShadow: 'var(--shadow)' }}
               >
-                {card.topic && (
-                  <span className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded-full mb-1.5 ${tagStyle(card.topic)}`}>
-                    {card.topic}
-                  </span>
-                )}
                 <p className="font-bold text-[17px] leading-snug break-keep text-[var(--text)]">{card.title}</p>
+                {/* 단어가 이 카드의 본체다 — 규칙보다 눈에 먼저 들어오게 크게 */}
                 {card.items.length > 0 && (
-                  <div className="flex gap-1.5 flex-wrap mt-2.5">
+                  <div className="flex gap-2 flex-wrap mt-3">
                     {card.items.map(item => (
-                      <span key={item} className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${tagStyle(item)}`}>
+                      <span key={item} className={`px-3 py-1.5 rounded-xl text-[15px] font-bold ${tagStyle(item)}`}>
                         {item}
                       </span>
                     ))}
@@ -347,14 +297,14 @@ export default function GrammarPage() {
 
                   <div className="space-y-1.5">
                     <label className="block text-sm font-semibold text-[var(--text2)]">
-                      단어 <span className="text-[var(--text3)] font-normal">(쉼표·Enter로 추가)</span>
+                      단어 <span className="text-[var(--text3)] font-normal">(쉼표 · 점 · Enter로 추가)</span>
                     </label>
                     {items.length > 0 && (
-                      <div className="flex gap-1.5 flex-wrap pb-1">
+                      <div className="flex gap-2 flex-wrap pb-1">
                         {items.map(t => (
                           <span
                             key={t}
-                            className={`inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-full text-xs font-semibold ${tagStyle(t)}`}
+                            className={`inline-flex items-center gap-1 pl-3 pr-1.5 py-1.5 rounded-xl text-[15px] font-bold ${tagStyle(t)}`}
                           >
                             {t}
                             <button
@@ -381,7 +331,8 @@ export default function GrammarPage() {
                         value={itemDraft}
                         onChange={e => {
                           const v = e.target.value;
-                          if (v.includes(',')) addItems(v);
+                          // 쉼표나 점을 치는 순간 칩으로 넘긴다 — 영문 자판에선 점이 쉼표보다 누르기 쉽다
+                          if (/[,.]/.test(v)) addItems(v);
                           else setItemDraft(v);
                         }}
                         onKeyDown={e => {
@@ -390,7 +341,7 @@ export default function GrammarPage() {
                             addItems(itemDraft);
                           }
                         }}
-                        placeholder="want, wish, hope"
+                        placeholder="want. wish. hope"
                         className={`${INPUT_CLASS} flex-1`}
                       />
                       <button
@@ -402,34 +353,6 @@ export default function GrammarPage() {
                         추가
                       </button>
                     </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-sm font-semibold text-[var(--text2)]">
-                      주제 <span className="text-[var(--text3)] font-normal">(선택 · 카드를 묶는 이름)</span>
-                    </label>
-                    <input
-                      type="text"
-                      lang="ko"
-                      value={topic}
-                      onChange={e => setTopic(e.target.value)}
-                      placeholder="예: to부정사"
-                      className={INPUT_CLASS}
-                    />
-                    {topics.filter(t => t !== topic.trim()).length > 0 && (
-                      <div className="flex gap-1.5 flex-wrap pt-1">
-                        {topics.filter(t => t !== topic.trim()).slice(0, 6).map(t => (
-                          <button
-                            key={t}
-                            type="button"
-                            onClick={() => setTopic(t)}
-                            className="px-2.5 py-1 rounded-full text-xs font-medium text-[var(--text3)] border border-dashed border-[var(--border2)] active:bg-[var(--surface2)] transition-colors"
-                          >
-                            + {t}
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
                   <div className="space-y-1.5">

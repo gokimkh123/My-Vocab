@@ -163,23 +163,19 @@ export default function GrammarStudy({ cards, onClose }: Props) {
         className="flex-1 overflow-y-auto px-6 text-center cursor-pointer select-none flex flex-col"
       >
         <div className="my-auto py-8 w-full">
-          {card.topic && (
-            <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-full mb-4 ${tagStyle(card.topic)}`}>
-              {card.topic}
-            </span>
-          )}
           <h2 className="text-[26px] font-bold leading-snug break-keep text-[var(--text)]">{card.title}</h2>
 
           {!revealed ? (
             <p className="mt-10 text-sm text-[var(--text3)]">화면을 탭해서 확인</p>
           ) : (
             <div className="mt-8">
+              {/* 답이 되는 단어들 — 이 화면의 주인공이라 규칙 제목만큼 크게 띄운다 */}
               {card.items.length > 0 && (
-                <div className="flex gap-2 flex-wrap justify-center">
+                <div className="flex gap-2.5 flex-wrap justify-center">
                   {card.items.map((item, i) => (
                     <span
                       key={item}
-                      className={`px-3.5 py-2 rounded-xl text-base font-bold ${tagStyle(item)}`}
+                      className={`px-4 py-2.5 rounded-2xl text-[22px] leading-tight font-bold ${tagStyle(item)}`}
                       style={{
                         animation: 'pop 0.3s cubic-bezier(0.22,1,0.36,1) both',
                         animationDelay: `${i * 45}ms`,
