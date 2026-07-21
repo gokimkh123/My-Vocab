@@ -64,9 +64,9 @@ export default function GrammarPage() {
     setSheetOpen(true);
   }
 
-  /** 쉼표(,)나 점(.)으로 여러 개 붙여넣어도 한 번에 칩으로 쪼갠다 — 영문 자판(email)에선 점이 제일 누르기 쉽다 */
+  /** 점(.)으로 여러 개 붙여넣어도 한 번에 칩으로 쪼갠다 — 영문 자판(email)에선 점이 제일 누르기 쉽다 */
   function addItems(raw: string) {
-    const parts = raw.split(/[,.]+/).map(s => s.trim()).filter(Boolean);
+    const parts = raw.split(/\.+/).map(s => s.trim()).filter(Boolean);
     setItemDraft('');
     if (!parts.length) return;
     setItems(prev => {
@@ -85,7 +85,7 @@ export default function GrammarPage() {
     }
     // 입력창에 남아 있는 단어도 저장에 포함한다 (Enter를 안 눌렀어도)
     const finalItems = [...items];
-    for (const p of itemDraft.split(/[,.]+/).map(s => s.trim()).filter(Boolean)) {
+    for (const p of itemDraft.split(/\.+/).map(s => s.trim()).filter(Boolean)) {
       if (!finalItems.includes(p)) finalItems.push(p);
     }
 
@@ -297,7 +297,7 @@ export default function GrammarPage() {
 
                   <div className="space-y-1.5">
                     <label className="block text-sm font-semibold text-[var(--text2)]">
-                      단어 <span className="text-[var(--text3)] font-normal">(쉼표 · 점 · Enter로 추가)</span>
+                      단어 <span className="text-[var(--text3)] font-normal">(점 · Enter로 추가)</span>
                     </label>
                     {items.length > 0 && (
                       <div className="flex gap-2 flex-wrap pb-1">
@@ -331,8 +331,8 @@ export default function GrammarPage() {
                         value={itemDraft}
                         onChange={e => {
                           const v = e.target.value;
-                          // 쉼표나 점을 치는 순간 칩으로 넘긴다 — 영문 자판에선 점이 쉼표보다 누르기 쉽다
-                          if (/[,.]/.test(v)) addItems(v);
+                          // 점을 치는 순간 칩으로 넘긴다 — 영문 자판에서 바로 누를 수 있다
+                          if (v.includes('.')) addItems(v);
                           else setItemDraft(v);
                         }}
                         onKeyDown={e => {
