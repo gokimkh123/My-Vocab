@@ -123,6 +123,11 @@ create table quiz_results (
 );
 ```
 
+`quiz_results.word_id` 외래키엔 on delete 동작이 없다 → 단어 삭제 API는 그 단어의 quiz_results를 먼저 지운다.
+퀴즈 기록 API는 `quiz_results(count)`로 실제 푼 문제 수를 세어, 한 문제도 안 푼 세션은 빼고 푼 수를 분모로 보여준다.
+
+외래키 인덱스(선택): `supabase/migration-indexes.sql` — 데이터가 쌓일수록 느려지는 개수 집계·단어 삭제를 막는다.
+
 ### grammar_cards 테이블
 ```sql
 create table grammar_cards (
@@ -199,6 +204,13 @@ create table grammar_cards (
 - 공통 컴포넌트는 components/ 폴더
 - DB 접근 로직은 lib/supabase/ 에서 관리
 - 에러 처리 필수
+- 화면에서 /api/* 호출은 `lib/api.ts`를 거친다 — 목록은 SWR fetcher `fetchJson`, 쓰기는 `request()`
+  (실패해도 던지지 않고 `{ data, error }`). 네트워크 끊김·401(로그인으로 이동)·오류 응답 처리가 여기 한곳에 있다.
+  `fetch().then(r => r.json())`를 화면에서 직접 부르지 말 것 — 로딩 버튼이 안 풀리거나 오류가 캐시에 "데이터"로 들어간다.
+- 쓰기 후엔 응답으로 SWR 캐시를 직접 고친다 (`mutate(..., { revalidate: false })`). 같은 목록을 다시 받지 않는다.
+- API 라우트에서 `revalidatePath`를 쓰지 않는다 — 화면이 전부 클라이언트 컴포넌트라 서버 HTML에 데이터가 없고,
+  부르면 정적 페이지 캐시만 날아가 함수 호출이 는다.
+- API 라우트는 요청 본문을 `lib/http.ts`의 `readBody`·`text`로 읽는다 (깨진 JSON·타입이 어긋난 값에 500 대신 400)
 
 ## 성공 기준 (MVP)
 - [ ] 로그인/로그아웃 작동

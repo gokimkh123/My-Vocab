@@ -1,20 +1,21 @@
-import useSWR from 'swr';
+import useSWR, { type SWRConfiguration } from 'swr';
+import { ApiError, SWR_OPTIONS, fetchJson } from '@/lib/api';
 import type { Group } from '@/lib/supabase/types';
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+export const GROUPS_KEY = '/api/groups';
+export type GroupsData = { data: Group[] };
 
-export function useGroups() {
-  const { data, error, isLoading, mutate } = useSWR<{ data: Group[]; error?: string }>(
-    '/api/groups',
-    fetcher,
-    // 단어를 추가하면 단어 수가 바뀐다 → 재진입 시 재검증해야 최신 개수가 보인다
-    { revalidateOnFocus: false, revalidateIfStale: true, dedupingInterval: 2000 }
+export function useGroups(options?: SWRConfiguration) {
+  const { data, error, isLoading, mutate } = useSWR<GroupsData, ApiError>(
+    GROUPS_KEY,
+    fetchJson,
+    { ...SWR_OPTIONS, ...options }
   );
 
   return {
     groups: data?.data ?? [],
     isLoading,
-    error: data?.error ?? (error ? '그룹 목록을 불러오지 못했습니다.' : null),
+    error: error?.message ?? null,
     mutate,
   };
 }

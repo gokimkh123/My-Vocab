@@ -6,13 +6,13 @@ import Link from 'next/link';
 import { mutate } from 'swr';
 import MeaningEditor from '@/components/MeaningEditor';
 import { useToast } from '@/components/Toast';
-import { useGroups } from '@/hooks/useGroups';
-import { useWords } from '@/hooks/useWords';
+import { GROUPS_KEY, useGroups, type GroupsData } from '@/hooks/useGroups';
+import { useWords, wordsKey, type WordsData } from '@/hooks/useWords';
+import { fetchJson, json, request } from '@/lib/api';
 import { POS_LABEL, cleanMeanings, emptyMeaning } from '@/lib/meanings';
-import type { Group, Meaning, Word } from '@/lib/supabase/types';
+import type { Meaning, Word } from '@/lib/supabase/types';
 
-type WordsCache = { data: Word[]; error?: string };
-type GroupsCache = { data: Group[]; error?: string };
+type DictResult = { part_of_speech: string[]; phonetic: string | null };
 
 const INPUT_CLASS =
   'w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-[var(--focus)] focus:border-[var(--text3)] transition-all min-h-[48px]';
@@ -21,8 +21,13 @@ const LABEL_CLASS = 'block text-sm font-semibold text-[var(--text2)] mb-1.5';
 export default function AddWordPage() {
   const searchParams = useSearchParams();
   const toast = useToast();
-  const { groups } = useGroups();
+  // 이 화면은 단어장 화면에서 들어온다 — 목록·단어 캐시가 방금 받은 것이라 다시 받지 않는다.
+  // 캐시가 없을 때(새로고침 등)만 불러온다. 추가한 단어는 아래에서 캐시에 직접 넣는다.
+  const { groups, isLoading: groupsLoading } = useGroups({ revalidateIfStale: false });
   const englishRef = useRef<HTMLInputElement>(null);
+  // 마지막으로 사전을 조회한 단어. 영어 칸은 포커스가 빠질 때마다 조회하는데(onBlur),
+  // 같은 단어로 칸을 들락날락할 때마다 요청과 "품사: …" 토스트가 반복되던 것을 막는다.
+  const lookedUpRef = useRef('');
 
   const [groupId, setGroupId] = useState(searchParams.get('group_id') ?? '');
   const [english, setEnglish] = useState('');
@@ -34,20 +39,25 @@ export default function AddWordPage() {
   const [addedCount, setAddedCount] = useState(0);
 
   // 이 단어장에서 이미 쓴 태그를 모아 다시 칠 필요 없게 제안한다
-  const { words } = useWords(groupId || null);
+  const { words } = useWords(groupId || null, { revalidateIfStale: false });
   const tagSuggestions = useMemo(() => {
     const seen = new Set<string>();
     for (const w of words) for (const m of w.meanings ?? []) for (const t of m.tags ?? []) seen.add(t);
     return Array.from(seen);
   }, [words]);
 
-  async function lookupDictionary() {
-    if (!english.trim()) return;
+  /** force: '조회' 버튼은 같은 단어라도 다시 조회한다 (onBlur 자동 조회만 중복을 건너뛴다) */
+  async function lookupDictionary(force = false) {
+    const key = english.trim().toLowerCase();
+    if (!key || (!force && key === lookedUpRef.current)) return;
+    lookedUpRef.current = key;
     setLookingUp(true);
     try {
-      const res = await fetch(`/api/dictionary?word=${encodeURIComponent(english.trim())}`);
-      const data = await res.json();
-      const pos: string[] = Array.isArray(data.part_of_speech) ? data.part_of_speech : [];
+      const data = await fetchJson<DictResult>(`/api/dictionary?word=${encodeURIComponent(key)}`);
+      // 응답을 기다리는 사이 다른 단어로 바꿨으면 옛 단어의 품사를 끼워넣지 않는다
+      if (englishRef.current?.value.trim().toLowerCase() !== key) return;
+
+      const pos = Array.isArray(data.part_of_speech) ? data.part_of_speech : [];
       setPhonetic(data.phonetic ?? null);
 
       if (pos.length === 0) {
@@ -66,6 +76,7 @@ export default function AddWordPage() {
       });
       toast.show(`품사: ${pos.map(p => POS_LABEL[p] ?? p).join(', ')}`, 'success');
     } catch {
+      lookedUpRef.current = ''; // 실패한 단어는 다음 blur 때 다시 시도
       toast.show('사전 조회에 실패했습니다', 'error');
     } finally {
       setLookingUp(false);
@@ -90,42 +101,40 @@ export default function AddWordPage() {
     setLoading(true);
     setError(null);
 
-    const res = await fetch('/api/words', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ english, meanings, group_id: groupId }),
-    });
-    const data = await res.json();
+    const { data, error: saveError } = await request<Word>(
+      '/api/words',
+      json('POST', { english, meanings, group_id: groupId })
+    );
+    setLoading(false);
 
-    if (data.error) {
-      setError(data.error);
-      setLoading(false);
+    if (!data) {
+      setError(saveError ?? '단어 추가에 실패했습니다.');
       return;
     }
 
     // POST 응답이 생성된 단어를 그대로 준다 → 목록 캐시 맨 앞에 끼워넣으면 재요청 없이 즉시 반영된다.
     // (/api/words는 created_at 내림차순 정렬이라 새 단어가 맨 앞)
-    mutate<WordsCache>(
-      `/api/words?group_id=${groupId}`,
-      prev => (prev ? { ...prev, data: [data.data, ...prev.data] } : prev),
+    mutate<WordsData>(
+      wordsKey(groupId),
+      prev => (prev ? { ...prev, data: [data, ...prev.data] } : prev),
       { revalidate: false }
     );
     // 단어장 목록의 단어 수도 로컬에서 +1 — 목록 전체를 재요청하지 않는다
-    mutate<GroupsCache>(
-      '/api/groups',
+    mutate<GroupsData>(
+      GROUPS_KEY,
       prev => prev
         ? { ...prev, data: prev.data.map(g => g.id === groupId ? { ...g, word_count: (g.word_count ?? 0) + 1 } : g) }
         : prev,
       { revalidate: false }
     );
     setAddedCount(c => c + 1);
-    toast.show(`'${english.trim()}' 추가됨`, 'success');
+    toast.show(`'${data.english}' 추가됨`, 'success');
 
     // 연속 입력: 단어장만 유지하고 나머지 비운 뒤 영어칸으로 포커스 → 바로 다음 단어 입력
     setEnglish('');
     setMeanings([emptyMeaning()]);
     setPhonetic(null);
-    setLoading(false);
+    lookedUpRef.current = '';
     englishRef.current?.focus();
   }
 
@@ -168,7 +177,7 @@ export default function AddWordPage() {
                 autoComplete="off"
                 value={english}
                 onChange={e => setEnglish(e.target.value)}
-                onBlur={lookupDictionary}
+                onBlur={() => lookupDictionary()}
                 required
                 autoCapitalize="none"
                 autoCorrect="off"
@@ -178,7 +187,7 @@ export default function AddWordPage() {
               />
               <button
                 type="button"
-                onClick={lookupDictionary}
+                onClick={() => lookupDictionary(true)}
                 disabled={lookingUp || !english.trim()}
                 className="px-4 min-h-[48px] text-sm font-semibold bg-[var(--surface2)] text-[var(--text2)] rounded-xl border border-[var(--border)] hover:bg-[var(--border)] disabled:opacity-40 transition-colors shrink-0"
               >
@@ -215,12 +224,14 @@ export default function AddWordPage() {
           <p className="text-xs font-bold text-[var(--text3)] uppercase tracking-widest">저장 위치</p>
           <div>
             <label className={LABEL_CLASS}>단어장 *</label>
-            {groups.length === 0 ? (
+            {groupsLoading ? (
+              <div className="skeleton h-12 rounded-xl" />
+            ) : groups.length === 0 ? (
               <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text3)] text-sm">
                 <span>단어장이 없습니다</span>
-                <a href="/groups" className="text-[var(--primary)] font-semibold text-xs">
+                <Link href="/groups" className="text-[var(--primary)] font-semibold text-xs">
                   만들기 →
-                </a>
+                </Link>
               </div>
             ) : (
               <select

@@ -35,6 +35,9 @@ export type QuizSession = {
   created_at: string;
 };
 
+/** 퀴즈 기록 화면용 — 세션 + 단어장 이름 */
+export type SessionWithGroup = QuizSession & { groups: { name: string } | null };
+
 export type QuizResult = {
   id: string;
   session_id: string;

@@ -1,29 +1,21 @@
 import useSWR from 'swr';
+import { ApiError, SWR_OPTIONS, fetchJson } from '@/lib/api';
+import type { SessionWithGroup } from '@/lib/supabase/types';
 
-export type SessionWithGroup = {
-  id: string;
-  group_id: string;
-  quiz_type: 'en_to_ko' | 'ko_to_en';
-  total_count: number;
-  correct_count: number;
-  completed_at: string | null;
-  created_at: string;
-  groups: { name: string } | null;
-};
-
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+export const HISTORY_KEY = '/api/quiz/history';
+export type HistoryData = { data: SessionWithGroup[] };
 
 export function useQuizHistory() {
-  const { data, error, isLoading, mutate } = useSWR<{ data: SessionWithGroup[]; error?: string }>(
-    '/api/quiz/history',
-    fetcher,
-    { revalidateOnFocus: false, revalidateIfStale: true, dedupingInterval: 2000 }
+  const { data, error, isLoading, mutate } = useSWR<HistoryData, ApiError>(
+    HISTORY_KEY,
+    fetchJson,
+    SWR_OPTIONS
   );
 
   return {
     sessions: data?.data ?? [],
     isLoading,
-    error: data?.error ?? (error ? '퀴즈 기록을 불러오지 못했습니다.' : null),
+    error: error?.message ?? null,
     mutate,
   };
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, getAuthUser } from '@/lib/supabase/server';
-import { NO_STORE } from '@/lib/http';
+import { NO_STORE, badRequest, readBody, text } from '@/lib/http';
 import type { ApiResponse, GrammarCard } from '@/lib/supabase/types';
 
 export const dynamic = 'force-dynamic';
@@ -43,27 +43,20 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 });
 
+  const body = await readBody(request);
+  if (!body) return badRequest();
+  const title = text(body.title);
+  if (!title) return badRequest('규칙 제목은 필수입니다.');
+
   const supabase = createClient();
-  const body = await request.json();
-  const { topic, title, items, memo } = body as {
-    topic?: string | null;
-    title: string;
-    items?: string[];
-    memo?: string | null;
-  };
-
-  if (!title?.trim()) {
-    return NextResponse.json({ data: null, error: '규칙 제목은 필수입니다.' }, { status: 400 });
-  }
-
   const { data, error } = await supabase
     .from('grammar_cards')
     .insert({
       user_id: user.id,
-      topic: topic?.trim() || null,
-      title: title.trim(),
-      items: cleanItems(items),
-      memo: memo?.trim() || null,
+      topic: text(body.topic) || null,
+      title,
+      items: cleanItems(body.items),
+      memo: text(body.memo) || null,
     })
     .select(CARD_COLS)
     .single();
@@ -79,28 +72,21 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<ApiRespo
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 });
 
-  const supabase = createClient();
-  const body = await request.json();
-  const { id, topic, title, items, memo } = body as {
-    id: string;
-    topic?: string | null;
-    title: string;
-    items?: string[];
-    memo?: string | null;
-  };
-
-  if (!id || !title?.trim()) {
-    return NextResponse.json({ data: null, error: '필수 항목을 모두 입력해주세요.' }, { status: 400 });
-  }
+  const body = await readBody(request);
+  if (!body) return badRequest();
+  const id = text(body.id);
+  const title = text(body.title);
+  if (!id || !title) return badRequest('필수 항목을 모두 입력해주세요.');
 
   // topic은 화면에서 뺐다(규칙 한 칸으로 통합) — 요청에 없으면 예전 카드에 저장된 값을 건드리지 않는다
   const patch: Record<string, unknown> = {
-    title: title.trim(),
-    items: cleanItems(items),
-    memo: memo?.trim() || null,
+    title,
+    items: cleanItems(body.items),
+    memo: text(body.memo) || null,
   };
-  if (topic !== undefined) patch.topic = topic?.trim() || null;
+  if (body.topic !== undefined) patch.topic = text(body.topic) || null;
 
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('grammar_cards')
     .update(patch)

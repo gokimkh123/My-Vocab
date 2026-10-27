@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { request } from '@/lib/api';
 import { POS_LABEL, POS_STYLE, tagStyle } from '@/lib/meanings';
 import type { Meaning, Word, QuizSession } from '@/lib/supabase/types';
 
@@ -82,28 +83,29 @@ export default function QuizSessionPage() {
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [exactMatch, setExactMatch] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  // 마지막 답안 전송을 기다리는 중 — '결과 보기'를 연타해도 한 번만 넘어가게
+  const [finishing, setFinishing] = useState(false);
 
   useEffect(() => {
+    // 로그인 만료(401)는 request가 로그인 화면으로 보낸다
     const url = wordIdsParam
       ? `/api/quiz?session_id=${sessionId}&word_ids=${wordIdsParam}`
       : `/api/quiz?session_id=${sessionId}`;
-    fetch(url)
-      .then(r => {
-        // 로그인이 만료되면 미들웨어가 401을 준다. 그냥 두면 "퀴즈를 찾을 수 없습니다"가 떠서
-        // 세션 만료인지 진짜 없는 퀴즈인지 구분이 안 된다.
-        if (r.status === 401) { router.replace('/login'); return null; }
-        return r.json();
-      })
-      .then(res => {
-        if (res?.data) {
-          setSession(res.data.session);
-          // 물어볼 뜻은 여기서 한 번만 고른다. 렌더할 때마다 고르면 문제가 바뀌어 버린다.
-          setItems((res.data.words as Word[]).map(w => ({ word: w, meaning: pickMeaning(w) })));
-        }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [sessionId, wordIdsParam, router]);
+    let ignore = false;
+    request<{ session: QuizSession; words: Word[] }>(url).then(({ data, error }) => {
+      if (ignore) return;
+      if (data) {
+        setSession(data.session);
+        // 물어볼 뜻은 여기서 한 번만 고른다. 렌더할 때마다 고르면 문제가 바뀌어 버린다.
+        setItems(data.words.map(w => ({ word: w, meaning: pickMeaning(w) })));
+      } else {
+        setLoadError(error);
+      }
+      setLoading(false);
+    });
+    return () => { ignore = true; };
+  }, [sessionId, wordIdsParam]);
 
   // 입력 중엔 입력칸, 정답 확인 후엔 '다음' 버튼에 포커스 → Enter로 바로 다음 문제
   useEffect(() => {
@@ -119,7 +121,8 @@ export default function QuizSessionPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!current || !session) return;
+    // feedback이 있으면 이미 채점한 문제 — 같은 답이 두 번 저장되지 않게
+    if (!current || !session || feedback) return;
 
     const correctAnswer =
       session.quiz_type === 'en_to_ko' ? current.meaning.korean : current.word.english;
@@ -160,12 +163,18 @@ export default function QuizSessionPage() {
     ]);
   }
 
-  async function handleNext() {
+  async function goToResult() {
+    if (finishing) return;
+    setFinishing(true);
+    await flushAnswers();
+    router.push(`/quiz/result/${sessionId}`);
+  }
+
+  function handleNext() {
     // 마지막 문제면 상태를 건드리지 않고 그대로 넘어간다.
     // 여기서 feedback을 먼저 지우면 flush를 기다리는 동안 입력창이 도로 나타났다 사라진다.
     if (currentIndex + 1 >= items.length) {
-      await flushAnswers();
-      router.push(`/quiz/result/${sessionId}`);
+      goToResult();
       return;
     }
     setAnswer('');
@@ -173,11 +182,8 @@ export default function QuizSessionPage() {
     setCurrentIndex(i => i + 1);
   }
 
-  async function handleQuit() {
-    if (confirm('퀴즈를 끝내고 지금까지 결과를 볼까요?')) {
-      await flushAnswers();
-      router.push(`/quiz/result/${sessionId}`);
-    }
+  function handleQuit() {
+    if (confirm('퀴즈를 끝내고 지금까지 결과를 볼까요?')) goToResult();
   }
 
   if (loading) {
@@ -193,7 +199,7 @@ export default function QuizSessionPage() {
   if (!session || !current) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-[var(--text2)]">퀴즈를 찾을 수 없습니다.</p>
+        <p className="text-[var(--text2)]">{loadError ?? '퀴즈를 찾을 수 없습니다.'}</p>
       </div>
     );
   }
@@ -220,6 +226,7 @@ export default function QuizSessionPage() {
             </span>
             <button
               onClick={handleQuit}
+              disabled={finishing}
               className="text-xs px-2 py-1 rounded-full text-[var(--text3)] hover:text-red-400 hover:bg-red-500/10 active:bg-red-500/15 transition-colors"
             >
               끝내기
@@ -285,9 +292,10 @@ export default function QuizSessionPage() {
           <button
             ref={nextBtnRef}
             onClick={handleNext}
-            className="w-full min-h-[52px] bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:bg-[var(--primary-hover)] text-[var(--primary-fg)] rounded-xl font-semibold transition-colors"
+            disabled={finishing}
+            className="w-full min-h-[52px] bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:bg-[var(--primary-hover)] text-[var(--primary-fg)] rounded-xl font-semibold transition-colors disabled:opacity-50"
           >
-            {currentIndex + 1 >= items.length ? '결과 보기 →' : '다음 →'}
+            {finishing ? '저장 중...' : currentIndex + 1 >= items.length ? '결과 보기 →' : '다음 →'}
           </button>
         </div>
       ) : (

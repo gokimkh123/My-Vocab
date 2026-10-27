@@ -80,6 +80,7 @@ input[type="range"] {
   outline: none;
   cursor: pointer;
 }
+/* 손잡이 그림자는 무채색 — 강조색을 무채색으로 바꿀 때 여기 인디고 그림자만 남아 있었다 */
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 24px;
@@ -87,7 +88,7 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 50%;
   background: var(--primary);
   border: 3px solid var(--surface);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
   cursor: pointer;
 }
 input[type="range"]::-moz-range-thumb {
@@ -96,7 +97,7 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 50%;
   background: var(--primary);
   border: 3px solid var(--surface);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
   cursor: pointer;
 }
 

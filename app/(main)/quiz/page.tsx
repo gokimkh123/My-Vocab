@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useGroups } from '@/hooks/useGroups';
+import { json, request } from '@/lib/api';
+import type { QuizSession } from '@/lib/supabase/types';
 
 export default function QuizSetupPage() {
   const router = useRouter();
-  const { groups } = useGroups();
+  const { groups, isLoading: groupsLoading } = useGroups();
   const [groupId, setGroupId] = useState('');
   const [quizType, setQuizType] = useState<'en_to_ko' | 'ko_to_en'>('en_to_ko');
   const [wordCount, setWordCount] = useState(10);
@@ -28,20 +30,18 @@ export default function QuizSetupPage() {
     setLoading(true);
     setError(null);
 
-    const res = await fetch('/api/quiz', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ group_id: groupId, quiz_type: quizType, total_count: wordCount }),
-    });
-    const data = await res.json();
+    const { data, error: startError } = await request<QuizSession>(
+      '/api/quiz',
+      json('POST', { group_id: groupId, quiz_type: quizType, total_count: wordCount })
+    );
 
-    if (data.error) {
-      setError(data.error);
+    if (!data) {
+      setError(startError ?? '퀴즈를 시작하지 못했습니다.');
       setLoading(false);
       return;
     }
 
-    router.push(`/quiz/${data.data.id}`);
+    router.push(`/quiz/${data.id}`);
   }
 
   return (
@@ -53,7 +53,11 @@ export default function QuizSetupPage() {
         {/* 단어장 선택 */}
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5" style={{ boxShadow: 'var(--shadow)' }}>
           <p className="text-xs font-bold text-[var(--text3)] uppercase tracking-widest mb-3">단어장</p>
-          {groups.length === 0 ? (
+          {groupsLoading ? (
+            <div className="space-y-2">
+              {[1, 2].map(i => <div key={i} className="skeleton h-12 rounded-xl" />)}
+            </div>
+          ) : groups.length === 0 ? (
             <div className="text-sm text-[var(--text3)] py-2">단어장이 없습니다. 먼저 단어장을 만들어주세요.</div>
           ) : (
             <div className="space-y-2">

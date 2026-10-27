@@ -35,14 +35,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
 
-  const { searchParams } = new URL(request.url);
-  const word = searchParams.get('word');
+  const key = request.nextUrl.searchParams.get('word')?.trim().toLowerCase();
 
-  if (!word?.trim()) {
-    return NextResponse.json({ error: 'word 파라미터가 필요합니다.' }, { status: 400 });
+  // 외부 API로 그대로 넘기는 값이라 길이를 막아 둔다 (영어 단어·숙어는 이보다 길 일이 없다)
+  if (!key || key.length > 64) {
+    return NextResponse.json({ error: 'word 파라미터가 올바르지 않습니다.' }, { status: 400 });
   }
-
-  const key = word.trim().toLowerCase();
 
   const cached = getCached(key);
   if (cached) {
@@ -63,7 +61,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       next: { revalidate: 86400 },
     }).finally(() => clearTimeout(timeout));
 
-    if (!res.ok) {
+    // "없는 단어"로 캐시해도 되는 건 404뿐이다. 429(요청 제한)·5xx까지 캐시하면 사전 서버가
+    // 잠깐 삐끗한 단어는 이 인스턴스가 살아 있는 내내 품사 추천이 안 나왔다.
+    if (res.status === 404) {
       const empty: DictResult = { pos: [], phonetic: null, example: null };
       setCached(key, empty);
       return NextResponse.json(
@@ -71,6 +71,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         { headers: { 'Cache-Control': 'private, max-age=3600' } }
       );
     }
+    if (!res.ok) throw new Error(`dictionary ${res.status}`);
 
     const data = await res.json();
     type Def = { example?: string };

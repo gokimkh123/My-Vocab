@@ -17,10 +17,19 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth
+      .signInWithPassword({ email, password })
+      .catch(() => ({ error: { status: 0 } }));
 
     if (error) {
-      setError('이메일 또는 비밀번호가 올바르지 않습니다.');
+      // 전부 "비밀번호가 틀렸다"로 뭉뚱그리면 지하철에서 끊긴 걸 비번 문제로 착각한다
+      setError(
+        error.status === 400
+          ? '이메일 또는 비밀번호가 올바르지 않습니다.'
+          : error.status === 429
+            ? '로그인 시도가 너무 많아요. 잠시 후 다시 시도해주세요.'
+            : '로그인하지 못했습니다. 네트워크 연결을 확인해주세요.'
+      );
       setLoading(false);
       return;
     }

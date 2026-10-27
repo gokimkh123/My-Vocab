@@ -50,6 +50,10 @@ const withPWA = withPWAInit({
   dest: 'public',
   disable: process.env.NODE_ENV === 'development',
   register: true,
+  // 기본값(true)은 오프라인→온라인으로 바뀌는 순간 페이지를 통째로 새로고침한다.
+  // 지하철·엘리베이터를 지날 때마다 쓰던 단어, 열린 시트, 퀴즈 진행 상황이 날아갔다.
+  // 데이터는 SWR이 재연결되는 순간 알아서 다시 받는다(revalidateOnReconnect 기본값) → 새로고침할 이유가 없다.
+  reloadOnOnline: false,
   // 아래 runtimeCaching은 기본 목록을 통째로 대체하지 않고, cacheName이 같은 항목만 덮어쓴다
   extendDefaultRuntimeCaching: true,
   workboxOptions: {

@@ -1,12 +1,16 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { LoadError } from '@/components/LoadError';
 import { HistoryCardSkeleton } from '@/components/Skeleton';
-import { useQuizHistory, type SessionWithGroup } from '@/hooks/useQuizHistory';
+import { useToast } from '@/components/Toast';
+import { useQuizHistory } from '@/hooks/useQuizHistory';
+import { json, request } from '@/lib/api';
+import type { QuizSession, SessionWithGroup } from '@/lib/supabase/types';
 
-type WrongEntry = { id: string; user_answer: string | null; words: { english: string; korean: string } | null };
+type WrongEntry = { id: string; user_answer: string | null; words: { id: string; english: string; korean: string } | null };
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -42,7 +46,8 @@ function dotColor(rate: number) {
 
 export default function QuizHistoryPage() {
   const router = useRouter();
-  const { sessions, isLoading: loading, mutate } = useQuizHistory();
+  const toast = useToast();
+  const { sessions, isLoading: loading, error, mutate } = useQuizHistory();
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
@@ -50,61 +55,77 @@ export default function QuizHistoryPage() {
   const [wrongCache, setWrongCache] = useState<Map<string, WrongEntry[]>>(new Map());
   const [loadingWrong, setLoadingWrong] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (error) toast.show(error, 'error');
+  }, [error, toast]);
+
+  /** 틀린 단어 목록. 한 번 받은 건 펼치기·재시험이 같이 쓴다 (같은 목록을 두 번 받지 않게) */
+  async function loadWrong(sessionId: string): Promise<WrongEntry[] | null> {
+    const cached = wrongCache.get(sessionId);
+    if (cached) return cached;
+    const { data, error } = await request<{ results: WrongEntry[] }>(
+      `/api/quiz?session_id=${sessionId}&wrong_only=true`
+    );
+    if (!data) {
+      toast.show(error ?? '틀린 단어를 불러오지 못했습니다.', 'error');
+      return null;
+    }
+    setWrongCache(prev => new Map(prev).set(sessionId, data.results));
+    return data.results;
+  }
+
   async function toggleWrong(sessionId: string) {
     if (expandedId === sessionId) { setExpandedId(null); return; }
     setExpandedId(sessionId);
     if (wrongCache.has(sessionId)) return;
     setLoadingWrong(sessionId);
-    const res = await fetch(`/api/quiz?session_id=${sessionId}&wrong_only=true`);
-    const data = await res.json();
-    setWrongCache(prev => {
-      const next = new Map(prev);
-      next.set(sessionId, data.data?.results ?? []);
-      return next;
-    });
+    const results = await loadWrong(sessionId);
     setLoadingWrong(null);
+    if (!results) setExpandedId(null);
   }
 
   async function handleRetry(session: SessionWithGroup) {
     setRetryingId(session.id);
-    const wrongCount = session.total_count - session.correct_count;
-    if (wrongCount === 0) { setRetryingId(null); return; }
-
-    // total_count는 세션에서 바로 계산 → 새 세션 POST와 틀린 단어 GET을 동시에 시작
-    const [wrongRes, newRes] = await Promise.all([
-      fetch(`/api/quiz?session_id=${session.id}&wrong_only=true`),
-      fetch('/api/quiz', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          group_id: session.group_id,
-          quiz_type: session.quiz_type,
-          total_count: wrongCount,
-        }),
-      }),
-    ]);
-    const [wrongData, newData] = await Promise.all([wrongRes.json(), newRes.json()]);
-    const wrongWords: { id: string }[] = wrongData.data?.words ?? [];
-
-    if (newData.data && wrongWords.length > 0) {
-      const wordIds = wrongWords.map((w: { id: string }) => w.id).join(',');
-      router.push(`/quiz/${newData.data.id}?word_ids=${wordIds}`);
+    // 틀린 단어를 먼저 확인하고 나서 세션을 만든다. 예전엔 둘을 동시에 보내서,
+    // 틀린 단어가 안 나오면 아무 일도 없는 척 빈 세션만 기록에 남았다.
+    const results = await loadWrong(session.id);
+    if (!results) {
+      setRetryingId(null);
+      return;
     }
-    setRetryingId(null);
+    const wordIds = results.flatMap(r => (r.words ? [r.words.id] : []));
+    if (wordIds.length === 0) {
+      toast.show('다시 풀 틀린 단어가 없어요.', 'info');
+      setRetryingId(null);
+      return;
+    }
+
+    const { data, error } = await request<QuizSession>('/api/quiz', json('POST', {
+      group_id: session.group_id,
+      quiz_type: session.quiz_type,
+      total_count: wordIds.length,
+    }));
+    if (!data) {
+      toast.show(error ?? '재시험을 시작하지 못했습니다.', 'error');
+      setRetryingId(null);
+      return;
+    }
+    router.push(`/quiz/${data.id}?word_ids=${wordIds.join(',')}`);
   }
 
   async function handleDelete(id: string) {
     if (!confirm('이 퀴즈 기록을 삭제할까요?')) return;
     setDeletingId(id);
-    const res = await fetch(`/api/quiz?session_id=${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (!data.error) {
-      mutate(
-        prev => prev ? { ...prev, data: prev.data.filter(s => s.id !== id) } : prev,
-        { revalidate: false }
-      );
-    }
+    const { error } = await request<null>(`/api/quiz?session_id=${id}`, { method: 'DELETE' });
     setDeletingId(null);
+    if (error) {
+      toast.show(error, 'error');
+      return;
+    }
+    mutate(
+      prev => prev ? { ...prev, data: prev.data.filter(s => s.id !== id) } : prev,
+      { revalidate: false }
+    );
   }
 
   const sorted = useMemo(() => [...sessions].sort((a, b) => {
@@ -151,8 +172,12 @@ export default function QuizHistoryPage() {
         </div>
       )}
 
+      {!loading && error && sessions.length === 0 && (
+        <LoadError message={error} onRetry={() => mutate()} />
+      )}
+
       {/* Empty state */}
-      {!loading && sessions.length === 0 && (
+      {!loading && !error && sessions.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
           <div className="w-14 h-14 rounded-2xl bg-[var(--surface2)] flex items-center justify-center mb-4">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -187,7 +212,7 @@ export default function QuizHistoryPage() {
                 <ul className="space-y-3 pl-9">
                   {list.map(s => {
                     const wrongCount = s.total_count - s.correct_count;
-                    const rate = Math.round(s.correct_count / s.total_count * 100);
+                    const rate = s.total_count ? Math.round(s.correct_count / s.total_count * 100) : 0;
                     return (
                       <li key={s.id} className="relative">
                         {/* Timeline dot */}

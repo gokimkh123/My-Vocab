@@ -4,9 +4,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { mutate } from 'swr';
+import { useToast } from '@/components/Toast';
+import { HISTORY_KEY } from '@/hooks/useQuizHistory';
+import { json, request } from '@/lib/api';
 import type { Word, QuizSession } from '@/lib/supabase/types';
 
 type WrongResult = { id: string; user_answer: string | null; words: Word | null };
+type WrongOnly = { session: QuizSession; words: Word[]; results: WrongResult[] };
 
 function ScoreCircle({ correct, total }: { correct: number; total: number }) {
   const pct = total === 0 ? 0 : correct / total;
@@ -49,10 +53,12 @@ function ScoreCircle({ correct, total }: { correct: number; total: number }) {
 export default function QuizResultPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const router = useRouter();
+  const toast = useToast();
   const [session, setSession] = useState<QuizSession | null>(null);
   const [wrongResults, setWrongResults] = useState<WrongResult[]>([]);
   const [wrongWords, setWrongWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
@@ -62,18 +68,21 @@ export default function QuizResultPage() {
       headers: { 'Content-Type': 'application/json' },
       keepalive: true,
       body: JSON.stringify({ session_id: sessionId, complete_session: true }),
-    }).then(() => mutate('/api/quiz/history')).catch(() => {});
+    }).then(() => mutate(HISTORY_KEY)).catch(() => {});
 
-    fetch(`/api/quiz?session_id=${sessionId}&wrong_only=true`)
-      .then(r => r.json())
-      .then(res => {
-        if (res.data) {
-          setSession(res.data.session);
-          setWrongWords(res.data.words ?? []);
-          setWrongResults(res.data.results ?? []);
-        }
-        setLoading(false);
-      });
+    let ignore = false;
+    request<WrongOnly>(`/api/quiz?session_id=${sessionId}&wrong_only=true`).then(({ data, error }) => {
+      if (ignore) return;
+      if (data) {
+        setSession(data.session);
+        setWrongWords(data.words);
+        setWrongResults(data.results);
+      } else {
+        setLoadError(error);
+      }
+      setLoading(false);
+    });
+    return () => { ignore = true; };
   }, [sessionId]);
 
   async function handleRetry() {
@@ -81,21 +90,17 @@ export default function QuizResultPage() {
     setRetrying(true);
 
     // wrongWords는 이미 상태에 있음 — 새 세션 POST 한 번이면 충분
-    const newRes = await fetch('/api/quiz', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        group_id: session.group_id,
-        quiz_type: session.quiz_type,
-        total_count: wrongWords.length,
-      }),
-    });
-    const newData = await newRes.json();
+    const { data, error } = await request<QuizSession>('/api/quiz', json('POST', {
+      group_id: session.group_id,
+      quiz_type: session.quiz_type,
+      total_count: wrongWords.length,
+    }));
 
-    if (newData.data) {
+    if (data) {
       const wordIds = wrongWords.map(w => w.id).join(',');
-      router.push(`/quiz/${newData.data.id}?word_ids=${wordIds}`);
+      router.push(`/quiz/${data.id}?word_ids=${wordIds}`);
     } else {
+      toast.show(error ?? '재시험을 시작하지 못했습니다.', 'error');
       setRetrying(false);
     }
   }
@@ -113,7 +118,7 @@ export default function QuizResultPage() {
   if (!session) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-[var(--text2)]">결과를 찾을 수 없습니다.</p>
+        <p className="text-[var(--text2)]">{loadError ?? '결과를 찾을 수 없습니다.'}</p>
       </div>
     );
   }

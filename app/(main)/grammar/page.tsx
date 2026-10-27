@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadError } from '@/components/LoadError';
 import { WordCardSkeleton } from '@/components/Skeleton';
 import { useToast } from '@/components/Toast';
 import { useGrammarCards } from '@/hooks/useGrammarCards';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import GrammarStudy from '@/components/GrammarStudy';
+import { json, request } from '@/lib/api';
 import { tagStyle } from '@/lib/meanings';
 import type { GrammarCard } from '@/lib/supabase/types';
 
@@ -96,33 +98,30 @@ export default function GrammarPage() {
       items: finalItems,
       memo: memo.trim() || null,
     };
-    const res = await fetch('/api/grammar', {
-      method: editing ? 'PATCH' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editing ? { id: editing.id, ...payload } : payload),
-    });
-    const data = await res.json();
+    const { data, error: saveError } = await request<GrammarCard>(
+      '/api/grammar',
+      editing ? json('PATCH', { id: editing.id, ...payload }) : json('POST', payload)
+    );
     setSubmitting(false);
 
-    if (data.error) {
-      toast.show(data.error, 'error');
+    if (!data) {
+      toast.show(saveError ?? '저장에 실패했습니다.', 'error');
       return;
     }
 
     if (editing) {
       mutate(
-        prev => prev && data.data
-          ? { ...prev, data: prev.data.map(c => (c.id === editing.id ? data.data : c)) }
+        prev => prev
+          ? { ...prev, data: prev.data.map(c => (c.id === editing.id ? data : c)) }
           : prev,
         { revalidate: false }
       );
       toast.show('카드를 수정했습니다.', 'success');
     } else {
+      // POST 응답이 만든 카드 그대로라 목록을 다시 받을 필요가 없다 (캐시가 없을 때만 받는다)
       mutate(
-        prev => prev && data.data
-          ? { ...prev, data: [data.data, ...prev.data] }
-          : prev,
-        { revalidate: true }
+        prev => prev ? { ...prev, data: [data, ...prev.data] } : prev,
+        { revalidate: cached => !cached }
       );
       toast.show('카드를 만들었습니다!', 'success');
     }
@@ -133,12 +132,11 @@ export default function GrammarPage() {
     if (!editing) return;
     if (!confirm('이 카드를 삭제할까요?')) return;
     setDeleting(true);
-    const res = await fetch(`/api/grammar?id=${editing.id}`, { method: 'DELETE' });
-    const data = await res.json();
+    const { error: deleteError } = await request<null>(`/api/grammar?id=${editing.id}`, { method: 'DELETE' });
     setDeleting(false);
 
-    if (data.error) {
-      toast.show(data.error, 'error');
+    if (deleteError) {
+      toast.show(deleteError, 'error');
       return;
     }
     mutate(
@@ -189,8 +187,12 @@ export default function GrammarPage() {
         </div>
       )}
 
+      {!loading && error && cards.length === 0 && (
+        <LoadError message={error} onRetry={() => mutate()} />
+      )}
+
       {/* Empty state */}
-      {!loading && cards.length === 0 && (
+      {!loading && !error && cards.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
           <div className="w-16 h-16 rounded-2xl bg-[var(--surface2)] flex items-center justify-center mb-4">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

@@ -39,3 +39,11 @@ yarn-error.log*
 next-env.d.ts
 
 .claude
+
+# PWA — next build가 매번 새로 만든다 (커밋된 옛 sw.js가 남아 있으면 헷갈리기만 한다)
+/public/sw.js
+/public/sw.js.map
+/public/workbox-*.js
+/public/workbox-*.js.map
+/public/swe-worker-*.js
+/public/fallback-*.js

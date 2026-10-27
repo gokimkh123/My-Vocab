@@ -47,15 +47,26 @@ export function emptyMeaning(): Meaning {
   return { pos: null, tags: [], korean: '' };
 }
 
-/** 뜻이 비어 있는 항목은 저장하지 않는다 */
-export function cleanMeanings(meanings: Meaning[]): Meaning[] {
-  return meanings
-    .map(m => ({
-      pos: m.pos || null,
-      tags: (m.tags ?? []).map(t => t.trim()).filter(Boolean),
-      korean: m.korean.trim(),
-    }))
-    .filter(m => m.korean.length > 0);
+/**
+ * 뜻이 비어 있는 항목은 저장하지 않는다.
+ * 서버는 요청 본문을 그대로 넘기므로 모양이 어긋난 값(배열이 아님, 숫자 태그 등)도 걸러낸다 —
+ * 그대로 두면 .trim()에서 500이 나거나 깨진 값이 DB에 남는다.
+ */
+export function cleanMeanings(meanings: unknown): Meaning[] {
+  if (!Array.isArray(meanings)) return [];
+  return meanings.flatMap((m): Meaning[] => {
+    if (!m || typeof m !== 'object') return [];
+    const { pos, tags, korean } = m as Record<string, unknown>;
+    const k = typeof korean === 'string' ? korean.trim() : '';
+    if (!k) return [];
+    return [{
+      pos: typeof pos === 'string' && pos ? pos : null,
+      tags: Array.isArray(tags)
+        ? tags.filter((t): t is string => typeof t === 'string').map(t => t.trim()).filter(Boolean)
+        : [],
+      korean: k,
+    }];
+  });
 }
 
 /**

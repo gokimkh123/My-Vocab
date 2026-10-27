@@ -2,10 +2,14 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { mutate as mutateKey } from 'swr';
+import { LoadError } from '@/components/LoadError';
 import { GroupCardSkeleton } from '@/components/Skeleton';
 import { useToast } from '@/components/Toast';
 import { useGroups } from '@/hooks/useGroups';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
+import { HISTORY_KEY, type HistoryData } from '@/hooks/useQuizHistory';
+import { json, request } from '@/lib/api';
 import type { Group } from '@/lib/supabase/types';
 
 type SortBy = 'name' | 'created_at' | 'word_count';
@@ -61,29 +65,29 @@ export default function GroupsPage() {
       { revalidate: false }
     );
 
-    const res = await fetch(`/api/groups?id=${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (data.error) {
-      toast.show(data.error, 'error');
-      mutate();
-    } else {
-      toast.show('단어장을 삭제했습니다.', 'success');
-    }
+    const { error } = await request<null>(`/api/groups?id=${id}`, { method: 'DELETE' });
     setDeletingId(null);
+    if (error) {
+      toast.show(error, 'error');
+      mutate(); // 낙관적으로 지운 걸 서버 목록으로 되돌린다
+      return;
+    }
+    toast.show('단어장을 삭제했습니다.', 'success');
+    // 이 단어장의 퀴즈 기록도 서버에서 같이 지워졌다 → 기록 캐시에서도 뺀다
+    mutateKey<HistoryData>(
+      HISTORY_KEY,
+      prev => prev ? { ...prev, data: prev.data.filter(s => s.group_id !== id) } : prev,
+      { revalidate: false }
+    );
   }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
-    const res = await fetch('/api/groups', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description }),
-    });
-    const data = await res.json();
+    const { data, error } = await request<Group>('/api/groups', json('POST', { name, description }));
     setSubmitting(false);
-    if (data.error) {
-      toast.show(data.error, 'error');
+    if (!data) {
+      toast.show(error ?? '단어장을 만들지 못했습니다.', 'error');
       return;
     }
     setShowModal(false);
@@ -91,11 +95,11 @@ export default function GroupsPage() {
     setDescription('');
     toast.show('단어장을 만들었습니다!', 'success');
 
+    // POST 응답이 만든 행 그대로라 목록을 다시 받을 필요가 없다.
+    // 목록을 아직 못 받은 상태(캐시 없음)일 때만 새로 받는다.
     mutate(
-      prev => prev && data.data
-        ? { ...prev, data: [data.data, ...prev.data] }
-        : prev,
-      { revalidate: true }
+      prev => prev ? { ...prev, data: [{ ...data, word_count: 0 }, ...prev.data] } : prev,
+      { revalidate: cached => !cached }
     );
   }
 
@@ -118,22 +122,20 @@ export default function GroupsPage() {
     if (!editingGroup) return;
     setEditSubmitting(true);
 
-    const res = await fetch(`/api/groups/${editingGroup.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: editGroupName, description: editGroupDesc }),
-    });
-    const data = await res.json();
+    const { data, error } = await request<Group>(
+      `/api/groups/${editingGroup.id}`,
+      json('PATCH', { name: editGroupName, description: editGroupDesc })
+    );
     setEditSubmitting(false);
 
-    if (data.error) {
-      toast.show(data.error, 'error');
+    if (!data) {
+      toast.show(error ?? '수정에 실패했습니다.', 'error');
       return;
     }
 
     mutate(
-      prev => prev && data.data
-        ? { ...prev, data: prev.data.map(g => g.id === editingGroup.id ? { ...g, ...data.data } : g) }
+      prev => prev
+        ? { ...prev, data: prev.data.map(g => g.id === editingGroup.id ? { ...g, ...data } : g) }
         : prev,
       { revalidate: false }
     );
@@ -186,8 +188,12 @@ export default function GroupsPage() {
         </div>
       )}
 
+      {!loading && groupsError && groups.length === 0 && (
+        <LoadError message={groupsError} onRetry={() => mutate()} />
+      )}
+
       {/* Empty state */}
-      {!loading && groups.length === 0 && (
+      {!loading && !groupsError && groups.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
           <div className="w-16 h-16 rounded-2xl bg-[var(--surface2)] flex items-center justify-center mb-4">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

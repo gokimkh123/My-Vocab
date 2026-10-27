@@ -25,9 +25,17 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getUser()는 요청마다 Supabase Auth 서버에 토큰을 물어본다(네트워크 왕복 1회 — 화면 이동·API 호출 전부).
+  // getClaims()는 프로젝트 공개키(JWKS, 10분 캐시)로 서명을 여기서 검증해 그 왕복이 없다.
+  // 대칭키(HS256) 프로젝트면 알아서 getUser()로 되돌아가므로 지금보다 느려질 일은 없다.
+  // 만료된 토큰은 getClaims 안의 getSession()이 갱신하고 setAll로 쿠키에 다시 써 준다.
+  let user: { sub: string } | null = null;
+  try {
+    const { data } = await supabase.auth.getClaims();
+    user = data?.claims ?? null;
+  } catch {
+    // 공개키 검증 중 예외(WebCrypto 등)가 미들웨어 전체를 500으로 만들지 않게 — 비로그인으로 취급
+  }
 
   const { pathname } = request.nextUrl;
 

@@ -4,16 +4,17 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { mutate } from 'swr';
+import { LoadError } from '@/components/LoadError';
 import MeaningEditor from '@/components/MeaningEditor';
 import { WordCardSkeleton } from '@/components/Skeleton';
 import { useToast } from '@/components/Toast';
 import { useGroup } from '@/hooks/useGroup';
+import { GROUPS_KEY, type GroupsData } from '@/hooks/useGroups';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { useWords } from '@/hooks/useWords';
+import { json, request } from '@/lib/api';
 import { POS_LABEL, POS_STYLE, emptyMeaning, tagStyle } from '@/lib/meanings';
-import type { Group, Meaning, Word } from '@/lib/supabase/types';
-
-type GroupsCache = { data: Group[]; error?: string };
+import type { Meaning, Word } from '@/lib/supabase/types';
 
 export default function GroupDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -85,26 +86,20 @@ export default function GroupDetailPage() {
     }
     setSubmitting(true);
 
-    const res = await fetch('/api/words', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: editingWord.id,
-        english: editEnglish,
-        meanings: editMeanings,
-      }),
-    });
-    const data = await res.json();
+    const { data, error } = await request<Word>(
+      '/api/words',
+      json('PATCH', { id: editingWord.id, english: editEnglish, meanings: editMeanings })
+    );
     setSubmitting(false);
 
-    if (data.error) {
-      toast.show(data.error, 'error');
+    if (!data) {
+      toast.show(error ?? '수정에 실패했습니다.', 'error');
       return;
     }
 
     mutateWords(
       prev => prev
-        ? { ...prev, data: prev.data.map(w => w.id === editingWord.id ? data.data : w) }
+        ? { ...prev, data: prev.data.map(w => w.id === editingWord.id ? data : w) }
         : prev,
       { revalidate: false }
     );
@@ -115,25 +110,24 @@ export default function GroupDetailPage() {
   async function handleDelete(wordId: string) {
     if (!confirm('이 단어를 삭제할까요?')) return;
     setDeletingId(wordId);
-    const res = await fetch(`/api/words?id=${wordId}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (data.error) {
-      toast.show(data.error, 'error');
-    } else {
-      mutateWords(
-        prev => prev ? { ...prev, data: prev.data.filter(w => w.id !== wordId) } : prev,
-        { revalidate: false }
-      );
-      // 단어장 목록의 단어 수도 로컬에서 -1 — 목록 전체를 재요청하지 않는다
-      mutate<GroupsCache>(
-        '/api/groups',
-        prev => prev
-          ? { ...prev, data: prev.data.map(g => g.id === id ? { ...g, word_count: Math.max(0, (g.word_count ?? 1) - 1) } : g) }
-          : prev,
-        { revalidate: false }
-      );
-    }
+    const { error } = await request<null>(`/api/words?id=${wordId}`, { method: 'DELETE' });
     setDeletingId(null);
+    if (error) {
+      toast.show(error, 'error');
+      return;
+    }
+    mutateWords(
+      prev => prev ? { ...prev, data: prev.data.filter(w => w.id !== wordId) } : prev,
+      { revalidate: false }
+    );
+    // 단어장 목록의 단어 수도 로컬에서 -1 — 목록 전체를 재요청하지 않는다
+    mutate<GroupsData>(
+      GROUPS_KEY,
+      prev => prev
+        ? { ...prev, data: prev.data.map(g => g.id === id ? { ...g, word_count: Math.max(0, (g.word_count ?? 1) - 1) } : g) }
+        : prev,
+      { revalidate: false }
+    );
   }
 
   if (loading) {
@@ -193,8 +187,12 @@ export default function GroupDetailPage() {
         <p className="text-xs text-[var(--text3)] mb-3 text-center">카드를 탭하면 뜻이 보여요</p>
       )}
 
+      {wordsError && words.length === 0 && (
+        <LoadError message={wordsError} onRetry={() => mutateWords()} />
+      )}
+
       {/* Empty state */}
-      {words.length === 0 && (
+      {!wordsError && words.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
           <div className="w-14 h-14 rounded-2xl bg-[var(--surface2)] flex items-center justify-center mb-4">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -204,7 +202,7 @@ export default function GroupDetailPage() {
           <p className="font-semibold text-[var(--text)] mb-1">아직 단어가 없어요</p>
           <p className="text-sm text-[var(--text2)] mb-6">첫 번째 단어를 추가해 보세요</p>
           <Link
-            href="/words/add"
+            href={`/words/add?group_id=${id}`}
             className="px-5 py-2.5 bg-[var(--primary)] text-[var(--primary-fg)] text-sm font-semibold rounded-xl hover:bg-[var(--primary-hover)] transition-colors"
           >
             단어 추가하기

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
 import { createClient, getAuthUser } from '@/lib/supabase/server';
-import { NO_STORE } from '@/lib/http';
+import { NO_STORE, badRequest, readBody, text } from '@/lib/http';
 import type { ApiResponse, Group } from '@/lib/supabase/types';
 
 export const dynamic = 'force-dynamic';
+
+const GROUP_COLS = 'id, name, description, created_at';
 
 export async function GET(): Promise<NextResponse<ApiResponse<Group[]>>> {
   const user = await getAuthUser();
@@ -15,7 +16,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<Group[]>>> {
   // 예전엔 단어 전체 행을 받아 JS로 셌다. 이 화면이 PWA 시작 화면이라 단어가 늘수록 첫 로딩이 느려졌다.
   const { data: groups, error } = await supabase
     .from('groups')
-    .select('id, name, description, created_at, words(count)')
+    .select(`${GROUP_COLS}, words(count)`)
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
@@ -34,23 +35,19 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 });
 
+  const body = await readBody(request);
+  if (!body) return badRequest();
+  const name = text(body.name);
+  if (!name) return badRequest('그룹 이름은 필수입니다.');
+
   const supabase = createClient();
-  const body = await request.json();
-  const { name, description } = body as { name: string; description?: string };
-
-  if (!name?.trim()) {
-    return NextResponse.json({ data: null, error: '그룹 이름은 필수입니다.' }, { status: 400 });
-  }
-
   const { data, error } = await supabase
     .from('groups')
-    .insert({ name: name.trim(), description: description?.trim() || null, user_id: user.id })
-    .select()
+    .insert({ name, description: text(body.description) || null, user_id: user.id })
+    .select(GROUP_COLS)
     .single();
 
   if (error) return NextResponse.json({ data: null, error: '그룹 생성에 실패했습니다.' }, { status: 500 });
-
-  revalidatePath('/groups');
   return NextResponse.json({ data, error: null }, { status: 201 });
 }
 
@@ -58,12 +55,10 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 });
 
+  const id = request.nextUrl.searchParams.get('id');
+  if (!id) return badRequest('id가 필요합니다.');
+
   const supabase = createClient();
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get('id');
-
-  if (!id) return NextResponse.json({ data: null, error: 'id가 필요합니다.' }, { status: 400 });
-
   const { data: group } = await supabase
     .from('groups')
     .select('id')
@@ -90,8 +85,5 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
   const { error } = await supabase.from('groups').delete().eq('id', id).eq('user_id', user.id);
   if (error) return NextResponse.json({ data: null, error: '삭제에 실패했습니다.' }, { status: 500 });
 
-  revalidatePath('/groups');
-  revalidatePath('/quiz');
-  revalidatePath('/quiz/history');
   return NextResponse.json({ data: null, error: null });
 }
