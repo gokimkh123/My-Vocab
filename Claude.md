@@ -5,7 +5,9 @@
 Next.js + TypeScript + Tailwind CSS + Supabase 기반 풀스택 웹앱.
 
 ## 기술 스택
-- **Frontend/Backend**: Next.js 14 (App Router) + TypeScript
+- **Frontend/Backend**: Next.js 15 (App Router, React 19) + TypeScript
+  - 14.x는 2026년 기준 지원 종료(보안 패치 없음) → 15.5.x 백포트 라인으로 올렸다.
+    Next 15부터 `cookies()`·라우트 `params`가 비동기다 (`await` 필요).
 - **Styling**: Tailwind CSS
 - **DB**: Supabase (PostgreSQL)
 - **외부 API**: Free Dictionary API (https://api.dictionaryapi.dev/api/v2/entries/en/{word})

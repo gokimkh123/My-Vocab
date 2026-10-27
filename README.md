@@ -15,7 +15,7 @@
 
 | 분류 | 기술 |
 |------|------|
-| Frontend | Next.js 14, TypeScript, Tailwind CSS |
+| Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS |
 | Backend | Next.js API Routes |
 | Database | Supabase (PostgreSQL) |
 | Auth | Supabase Auth |

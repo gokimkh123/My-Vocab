@@ -27,7 +27,7 @@ function decodeUserId(accessToken: string): string | null {
 
 // API 라우트에서 인증된 유저 id 가져오기 - 없으면 null 반환
 export async function getAuthUser(): Promise<{ id: string } | null> {
-  const supabase = createAuthClient();
+  const supabase = await createAuthClient();
   // middleware.ts가 /api/* 포함 모든 매칭 경로에서 getClaims()로 토큰 서명을 이미 검증함
   // (위변조·만료 시 401을 돌려줘 이 핸들러까지 도달하지 못함).
   // 그래서 여기서 다시 검증하지 않고, 이미 검증된 쿠키의 access_token에서 sub만 로컬 디코드한다.
@@ -38,9 +38,9 @@ export async function getAuthUser(): Promise<{ id: string } | null> {
   return id ? { id } : null;
 }
 
-// 인증 세션 확인용 - anon key + 쿠키 세션
-export function createAuthClient() {
-  const cookieStore = cookies();
+// 인증 세션 확인용 - anon key + 쿠키 세션 (Next 15부터 cookies()가 비동기)
+export async function createAuthClient() {
+  const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

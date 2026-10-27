@@ -7,6 +7,9 @@ const nextConfig = {
   poweredByHeader: false,
   experimental: {
     optimizePackageImports: ['swr', '@supabase/ssr', '@supabase/supabase-js'],
+    // Next 15부터 동적 페이지(/groups/[id], /quiz/*)의 클라이언트 라우터 캐시 기본값이 30초→0초다.
+    // 그대로 두면 방금 본 단어장에 다시 들어갈 때마다 서버 렌더 요청(함수 호출)이 하나씩 는다 → 14 동작 유지.
+    staleTimes: { dynamic: 30 },
   },
   async headers() {
     return [

@@ -8,7 +8,7 @@ import { ScrollFix } from '@/components/ScrollFix';
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   async function signOut() {
     'use server';
-    const supabase = createAuthClient();
+    const supabase = await createAuthClient();
     await supabase.auth.signOut();
     redirect('/login');
   }

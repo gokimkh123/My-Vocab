@@ -9,8 +9,9 @@ export const dynamic = 'force-dynamic';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<ApiResponse<Group>>> {
+  const { id } = await params;
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ data: null, error: '인증이 필요합니다.' }, { status: 401 });
 
@@ -23,7 +24,7 @@ export async function PATCH(
   const { data, error } = await supabase
     .from('groups')
     .update({ name, description: text(body.description) || null })
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .select('id, name, description, created_at')
     .single();
